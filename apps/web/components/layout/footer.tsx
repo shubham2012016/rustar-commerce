@@ -1,138 +1,110 @@
-import Link from "next/link"
-import {
-  FaFacebookF,
-  FaInstagram,
-  FaLinkedinIn,
-  FaYoutube,
-} from "react-icons/fa6"
+import { ShieldCheck, Truck, Star, BadgeCheck } from "lucide-react"
+
+import FooterLinks from "./FooterLinks"
+import FooterBottom from "./FooterBottom"
+
+const trustCards = [
+  {
+    title: "Fast Nationwide Delivery",
+    description: "Quick & reliable shipping across India.",
+    icon: Truck,
+  },
+  {
+    title: "Premium Quality",
+    description: "Professional-grade automotive chemicals.",
+    icon: Star,
+  },
+  {
+    title: "Secure Payments",
+    description: "100% encrypted & trusted payment gateway.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Made in India",
+    description: "Proudly manufactured for Indian roads.",
+    icon: BadgeCheck,
+  },
+]
 
 export default function Footer() {
   return (
-    <footer className="border-t bg-slate-950 text-slate-300">
-      <div className="mx-auto max-w-7xl px-6">
-        {/* Top */}
+    <footer className="relative overflow-hidden bg-[#030817] text-white">
+      {/* ================================================= */}
+      {/* Top Accent */}
+      {/* ================================================= */}
 
-        <div className="grid gap-14 py-20 lg:grid-cols-5">
-          {/* Brand */}
+      <div className="h-1 w-full bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600" />
 
-          <div className="lg:col-span-2">
-            <h2 className="text-3xl font-bold text-white">Rustar Chem</h2>
+      {/* ================================================= */}
+      {/* Background Glow */}
+      {/* ================================================= */}
 
-            <p className="mt-5 max-w-md leading-8 text-slate-400">
-              Premium automotive detailing products engineered for professionals
-              and enthusiasts. Trusted solutions for car care, bike care and
-              industrial maintenance.
-            </p>
+      <div className="absolute top-0 -left-40 h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-[140px]" />
 
-            <div className="mt-8 flex max-w-md">
-              <input
-                placeholder="Enter your email"
-                className="flex-1 rounded-l-xl border border-slate-700 bg-slate-900 px-5 py-4 outline-none"
-              />
+      <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-cyan-500/15 blur-[140px]" />
 
-              <button className="rounded-r-xl bg-blue-600 px-7 font-semibold text-white transition hover:bg-blue-700">
-                Subscribe
-              </button>
-            </div>
-          </div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_55%)]" />
 
-          {/* Shop */}
+      {/* ================================================= */}
+      {/* Content */}
+      {/* ================================================= */}
 
-          <div>
-            <h3 className="mb-6 text-lg font-semibold text-white">Shop</h3>
+      <div className="relative mx-auto max-w-7xl px-6 py-20">
+        {/* ============================ */}
+        {/* Heading */}
+        {/* ============================ */}
 
-            <div className="space-y-4 flex flex-col">
-              <Link href="/categories/car-care">Car Care</Link>
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex rounded-full border border-blue-500/20 bg-blue-500/10 px-5 py-2 text-xs font-semibold tracking-[0.28em] text-blue-300 uppercase">
+            Trusted Automotive Brand
+          </span>
 
-              <Link href="/categories/bike-care">Bike Care</Link>
+          <h2 className="mt-6 text-4xl font-black tracking-tight md:text-5xl">
+            Trusted by Thousands of Vehicle Owners
+          </h2>
 
-              <Link href="/categories/chain-care">Chain Care</Link>
-
-              <Link href="/products">All Products</Link>
-            </div>
-          </div>
-
-          {/* Company */}
-
-          <div>
-            <h3 className="mb-6 text-lg font-semibold text-white">Company</h3>
-
-            <div className="space-y-4 flex flex-col">
-              <Link href="/about">About Us</Link>
-
-              <Link href="/blog">Blog</Link>
-
-              <Link href="/contact">Contact</Link>
-
-              <Link href="/careers">Careers</Link>
-            </div>
-          </div>
-
-          {/* Support */}
-
-          <div>
-            <h3 className="mb-6 text-lg font-semibold text-white">Support</h3>
-
-            <div className="space-y-4 flex flex-col">
-              <Link href="/shipping">Shipping Policy</Link>
-
-              <Link href="/returns">Returns</Link>
-
-              <Link href="/privacy">Privacy Policy</Link>
-
-              <Link href="/terms">Terms & Conditions</Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
-
-        <div className="grid gap-6 border-y border-slate-800 py-10 text-center text-sm lg:grid-cols-4">
-          <div>
-            🚚
-            <p className="mt-2 font-medium">Fast Nationwide Delivery</p>
-          </div>
-
-          <div>
-            🔒
-            <p className="mt-2 font-medium">Secure Payments</p>
-          </div>
-
-          <div>
-            ⭐<p className="mt-2 font-medium">Premium Quality Products</p>
-          </div>
-
-          <div>
-            🇮🇳
-            <p className="mt-2 font-medium">Proudly Made in India</p>
-          </div>
-        </div>
-
-        {/* Bottom */}
-
-        <div className="flex flex-col items-center justify-between gap-6 py-8 lg:flex-row">
-          <p className="text-sm text-slate-500">
-            © 2026 Rustar Chem. All rights reserved.
+          <p className="mt-6 text-lg leading-8 text-slate-300">
+            Premium car care, bike care and maintenance products engineered for
+            enthusiasts, professionals and workshops across India.
           </p>
-
-          <div className="flex items-center gap-5">
-            <Link href="#">
-              <FaFacebookF />
-            </Link>
-
-            <Link href="#">
-              <FaInstagram />
-            </Link>
-
-            <Link href="#">
-              <FaYoutube />
-            </Link>
-
-            <Link href="#">
-              <FaLinkedinIn />
-            </Link>
-          </div>
         </div>
+
+        {/* ============================ */}
+        {/* Trust Cards */}
+        {/* ============================ */}
+
+        <div className="mt-16 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {trustCards.map(({ title, description, icon: Icon }) => (
+            <div
+              key={title}
+              className="group rounded-[30px] border border-white/10 bg-white/5 p-7 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-blue-500/40 hover:bg-white/10"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-lg shadow-blue-600/30 transition-transform duration-300 group-hover:scale-110">
+                <Icon size={26} />
+              </div>
+
+              <h3 className="mt-6 text-xl font-bold">{title}</h3>
+
+              <p className="mt-3 leading-7 text-slate-300">{description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Divider */}
+
+        <div className="my-20 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+        {/* ============================ */}
+        {/* Footer Links */}
+        {/* ============================ */}
+
+        <FooterLinks />
+
+        {/* ============================ */}
+        {/* Footer Bottom */}
+        {/* ============================ */}
+
+        <FooterBottom />
       </div>
     </footer>
   )

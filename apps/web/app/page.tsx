@@ -4,6 +4,7 @@ import { BestSellers } from "@/components/home/BestSellers"
 import { WhyChooseUs } from "@/components/home/WhyChooseUs"
 import { FeaturedCollections } from "@/components/home/FeaturedCollections"
 import Testimonials from "@/components/home/Testimonials"
+import Newsletter from "@/components/home/Newsletter/Newsletter"
 
 
 export default function HomePage() {
@@ -14,6 +15,8 @@ export default function HomePage() {
       <BestSellers />
       <WhyChooseUs />
       <FeaturedCollections />
+      <Testimonials />
+      <Newsletter />
     </>
     
   )
