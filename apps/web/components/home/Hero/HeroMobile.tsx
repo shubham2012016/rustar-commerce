@@ -19,18 +19,18 @@ export default function HeroMobile({
         setActiveIndex={setActiveIndex}
       />
 
-      <section>
-        <div className="mb-5 flex items-end justify-between">
+      <section className="mt-2">
+        <div className="mb-6 px-1">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-600">
               Featured Products
             </p>
 
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900">
               Best Sellers
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+            <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
               Explore our most loved automotive care products.
             </p>
           </div>

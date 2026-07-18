@@ -3,8 +3,8 @@
 import { useEffect } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 
-import { heroProducts } from "./hero.data"
 import HeroProductCard from "./HeroProductCard"
+import { heroProducts } from "./hero.data"
 
 interface ProductCarouselProps {
   activeIndex: number
@@ -18,43 +18,43 @@ export default function ProductCarousel({
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
-    dragFree: false,
+    skipSnaps: false,
   })
 
+  /**
+   * Hero controls the active slide.
+   * Carousel simply follows Hero.
+   */
   useEffect(() => {
     if (!emblaApi) return
 
-    emblaApi.scrollTo(activeIndex)
+    if (emblaApi.selectedScrollSnap() !== activeIndex) {
+      emblaApi.scrollTo(activeIndex)
+    }
   }, [activeIndex, emblaApi])
 
-  useEffect(() => {
-    if (!emblaApi) return
-
-    const onSelect = () => {
-      setActiveIndex(emblaApi.selectedScrollSnap())
-    }
-
-    emblaApi.on("select", onSelect)
-
-    return () => {
-      emblaApi.off("select", onSelect)
-    }
-  }, [emblaApi, setActiveIndex])
-
   return (
-    <div className="relative">
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex">
-          {heroProducts.map((product, index) => (
+    <div className="overflow-hidden" ref={emblaRef}>
+      <div className="-ml-2 flex">
+        {heroProducts.map((product, index) => {
+          const active = index === activeIndex
+
+          return (
             <div
               key={product.id}
-              className="min-w-0 flex-[0_0_33.3333%] px-3"
-              onClick={() => setActiveIndex(index)}
+              className="min-w-0 flex-[0_0_84%] pl-2 sm:flex-[0_0_62%] lg:flex-[0_0_33.333%]"
             >
-              <HeroProductCard product={product} />
+              <div
+                onClick={() => setActiveIndex(index)}
+                className={`cursor-pointer transition-all duration-500 ${
+                  active ? "opacity-100" : "opacity-75 lg:opacity-100"
+                } `}
+              >
+                <HeroProductCard product={product} />
+              </div>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
     </div>
   )

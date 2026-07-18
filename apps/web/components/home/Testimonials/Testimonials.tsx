@@ -1,9 +1,9 @@
-import { Sparkles } from "lucide-react"
+import { Sparkles, Star } from "lucide-react"
 
-import FeatureCard from "./FeatureCard"
-import { features } from "./whyChooseUs.data"
+import TestimonialCard from "./TestimonialCard"
+import { testimonials } from "./testimonial.data"
 
-export default function WhyChooseUs() {
+export default function Testimonials() {
   return (
     <section className="relative overflow-hidden py-24">
       {/* Background */}
@@ -15,52 +15,52 @@ export default function WhyChooseUs() {
 
       <div className="mx-auto max-w-7xl px-6">
         {/* Header */}
-        <div className="mx-auto mb-16 max-w-3xl text-center">
+        <div className="mx-auto max-w-3xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
             <Sparkles size={16} />
-            Why Rustar Chem
+            Customer Reviews
           </div>
 
           <h2 className="mt-6 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
             Trusted by
             <span className="block bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-              Professionals Across India
+              Thousands of Customers
             </span>
           </h2>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            Every Rustar Chem product is engineered to deliver reliable
-            performance, long-lasting protection, and professional-grade results
-            for cars and bikes.
-          </p>
+          <div className="mt-8 flex flex-col items-center">
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Star
+                  key={index}
+                  size={22}
+                  className="fill-yellow-400 text-yellow-400"
+                />
+              ))}
+            </div>
+
+            <h3 className="mt-4 text-5xl font-black text-slate-900">4.8 / 5</h3>
+
+            <p className="mt-2 text-slate-600">
+              Based on 8,500+ verified customer reviews
+            </p>
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-4">
-          {features.map((feature) => (
-            <FeatureCard key={feature.id} feature={feature} />
+        {/* Cards */}
+        <div className="mt-16 grid gap-8 lg:grid-cols-3">
+          {testimonials.map((testimonial) => (
+            <TestimonialCard key={testimonial.id} testimonial={testimonial} />
           ))}
         </div>
 
         {/* Stats */}
         <div className="mt-20 grid gap-6 rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm md:grid-cols-2 xl:grid-cols-4">
           {[
-            {
-              value: "5000+",
-              label: "Happy Customers",
-            },
-            {
-              value: "50+",
-              label: "Products",
-            },
-            {
-              value: "4.8★",
-              label: "Average Rating",
-            },
-            {
-              value: "100%",
-              label: "Quality Tested",
-            },
+            { value: "5000+", label: "Happy Customers" },
+            { value: "98%", label: "Repeat Purchase Rate" },
+            { value: "50+", label: "Premium Products" },
+            { value: "4.8★", label: "Average Rating" },
           ].map((item) => (
             <div key={item.label} className="text-center">
               <h3 className="text-5xl font-black text-blue-600">
