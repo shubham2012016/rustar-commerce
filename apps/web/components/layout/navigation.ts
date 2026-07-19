@@ -1,7 +1,7 @@
 export const navigation = [
   {
     label: "Shop",
-    href: "/products",
+    href: "/shop  ",
     megaMenu: true,
   },
   {

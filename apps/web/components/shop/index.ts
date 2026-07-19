@@ -1,0 +1,5 @@
+export { default as ShopHeader } from "./ShopHeader"
+export { default as ShopSidebar } from "./ShopSidebar"
+export { default as ShopFilters } from "./ShopFilters"
+export { default as ShopGrid } from "./ShopGrid"
+export { default as ShopPagination } from "./ShopPagination"

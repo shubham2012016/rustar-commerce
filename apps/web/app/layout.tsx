@@ -2,9 +2,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import AnnouncementBar from "@/components/layout/announcement-bar"
-import SearchOverlay from "@/components/layout/search-overlay"
-import CartDrawer from "@/components/layout/cart-drawer"
 
 import "./globals.css"
 
@@ -80,19 +77,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-white text-slate-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} overflow-x-hidden bg-white text-slate-900 antialiased`}
       >
         <Providers>
-
           <Header />
 
           <main>{children}</main>
 
           <Footer />
-
-          {/* <SearchOverlay /> */}
-
-          {/* <CartDrawer /> */}
         </Providers>
       </body>
     </html>

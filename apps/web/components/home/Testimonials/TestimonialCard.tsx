@@ -41,7 +41,9 @@ export default function TestimonialCard({ testimonial }: Props) {
       </div>
 
       {/* Review */}
-      <p className="mt-6 leading-8 text-slate-600">"{testimonial.review}"</p>
+      <p className="mt-6 leading-8 text-slate-600">
+        &quot;{testimonial.review}&quot;
+      </p>
 
       {/* Footer */}
       <div className="mt-8 flex items-center justify-between">

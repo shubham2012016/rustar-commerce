@@ -1,0 +1,5 @@
+export { default as CheckoutHeader } from "./CheckoutHeader"
+export { default as CheckoutAddress } from "./CheckoutAddress"
+export { default as CheckoutShipping } from "./CheckoutShipping"
+export { default as CheckoutPayment } from "./CheckoutPayment"
+export { default as CheckoutSummary } from "./CheckoutSummary"

@@ -24,7 +24,11 @@ export default function Header() {
     <>
       <AnnouncementBar />
 
-      <header className="sticky top-0 z-50 border-b bg-white/90 backdrop-blur-md">
+      <header
+        className={`sticky top-0 z-50 border-b bg-white/90 backdrop-blur-md transition-shadow ${
+          scrolled ? "shadow-sm" : ""
+        }`}
+      >
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
           <Logo />
 

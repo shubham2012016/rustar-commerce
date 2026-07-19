@@ -1,7 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
-
+import { ROUTES } from "@/lib/routes"
 import type { HeroProduct } from "./types"
 
 interface HeroProductCardProps {
@@ -11,7 +11,7 @@ interface HeroProductCardProps {
 export default function HeroProductCard({ product }: HeroProductCardProps) {
   return (
     <Link
-      href={`/shop/${product.slug}`}
+      href={`${ROUTES.products}/${product.slug}`}
       className="group relative block overflow-hidden rounded-[28px] border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/10"
     >
       {/* Glow */}
