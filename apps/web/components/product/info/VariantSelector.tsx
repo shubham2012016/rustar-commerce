@@ -1,21 +1,17 @@
 "use client"
 
-import { useState } from "react"
 import clsx from "clsx"
 
+import { useProduct } from "@/components/product/context/ProductContext"
 import { PRODUCT } from "@/data/products/product.data"
 
 export default function VariantSelector() {
-  const [selectedVariant, setSelectedVariant] = useState(
-    PRODUCT.variants[0]?.id
-  )
+  const { selectedVariant, setSelectedVariant } = useProduct()
 
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-900">
-          Select Size
-        </h3>
+        <h3 className="text-lg font-bold text-slate-900">Select Size</h3>
 
         <span className="text-sm text-slate-500">
           {PRODUCT.variants.length} Options
@@ -43,14 +39,10 @@ export default function VariantSelector() {
                   "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60"
               )}
             >
-              <div className="text-lg font-bold">
-                {variant.value}
-              </div>
+              <div className="text-lg font-bold">{variant.value}</div>
 
-              <div className="mt-2 text-xs uppercase tracking-wider">
-                {variant.inStock
-                  ? "In Stock"
-                  : "Out of Stock"}
+              <div className="mt-2 text-xs tracking-wider uppercase">
+                {variant.inStock ? "In Stock" : "Out of Stock"}
               </div>
             </button>
           )

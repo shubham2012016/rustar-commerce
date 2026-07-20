@@ -1,3 +1,5 @@
+"use client"
+
 import {
   CheckoutAddress,
   CheckoutHeader,
@@ -6,7 +8,15 @@ import {
   CheckoutSummary,
 } from "@/components/checkout"
 
+import { useCartStore, useCheckoutStore } from "@/store"
+
 export default function CheckoutPage() {
+  const cartItems = useCartStore((state) => state.items)
+
+  const buyNowItems = useCheckoutStore((state) => state.items)
+
+  const checkoutItems = buyNowItems.length > 0 ? buyNowItems : cartItems
+
   return (
     <main className="bg-slate-50">
       <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
@@ -21,7 +31,7 @@ export default function CheckoutPage() {
             <CheckoutPayment />
           </div>
 
-          <CheckoutSummary />
+          <CheckoutSummary items={checkoutItems} />
         </div>
       </section>
     </main>

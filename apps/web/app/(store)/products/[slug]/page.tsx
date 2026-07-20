@@ -1,3 +1,9 @@
+import { notFound } from "next/navigation"
+
+import { PRODUCTS } from "@/data/products"
+
+import { ProductProvider } from "@/components/product/context/ProductContext"
+
 import ImageGallery from "@/components/product/gallery/ImageGallery"
 
 import ProductHeader from "@/components/product/info/ProductHeader"
@@ -14,53 +20,62 @@ import ProductReviews from "@/components/product/reviews/ProductReviews"
 import RelatedProducts from "@/components/product/related/RelatedProducts"
 import FAQSection from "@/components/product/faq/FAQSection"
 
-export default function ProductPage() {
+interface Props {
+  params: Promise<{
+    slug: string
+  }>
+}
+
+export default async function ProductPage({ params }: Props) {
+  const { slug } = await params
+
+  const product = PRODUCTS.find((item) => item.slug === slug)
+
+  if (!product) {
+    notFound()
+  }
+
   return (
-    <div className="bg-slate-50">
-      {/* Hero Section */}
-      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-        <div className="grid gap-14 lg:grid-cols-2 lg:items-start">
-          {/* Gallery */}
+    <ProductProvider product={product}>
+      <div className="bg-slate-50">
+        {/* Hero Section */}
 
-          <div className="lg:sticky lg:top-24 self-start">
-            <ImageGallery />
+        <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+          <div className="grid gap-14 lg:grid-cols-2 lg:items-start">
+            <div className="self-start lg:sticky lg:top-24">
+              <ImageGallery />
+            </div>
+
+            <div className="space-y-8">
+              <ProductHeader />
+
+              <PriceCard />
+
+              <VariantSelector />
+
+              <QuantitySelector />
+
+              <PurchaseActions />
+
+              <ShippingInfo />
+
+              <TrustBadges />
+            </div>
           </div>
+        </section>
 
-          {/* Product Information */}
+        <section className="mx-auto mt-20 max-w-7xl px-6 lg:px-8">
+          <ProductTabs />
+        </section>
 
-          <div className="space-y-8">
-            <ProductHeader />
+        <section className="mx-auto mt-20 max-w-7xl px-6 pb-24 lg:px-8">
+          <ProductReviews />
+        </section>
 
-            <PriceCard />
+        <RelatedProducts />
 
-            <VariantSelector />
-
-            <QuantitySelector />
-
-            <PurchaseActions />
-
-            <ShippingInfo />
-
-            <TrustBadges />
-          </div>
-        </div>
-      </section>
-
-      {/* Product Tabs */}
-
-      <section className="mx-auto mt-20 max-w-7xl px-6 lg:px-8">
-        <ProductTabs />
-      </section>
-
-      {/* Product Reviews */}
-
-      <section className="mx-auto mt-20 max-w-7xl px-6 pb-24 lg:px-8">
-        <ProductReviews />
-      </section>
-
-      <RelatedProducts />
-      <FAQSection />
-      
-    </div>
+        <FAQSection />
+      </div>
+    </ProductProvider>
   )
 }

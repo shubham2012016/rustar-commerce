@@ -1,29 +1,39 @@
-import Link from "next/link"
-import Image from "next/image"
+"use client"
 
-export default function CheckoutSummary() {
+import Image from "next/image"
+import Link from "next/link"
+
+import type { CartItem } from "@/types"
+
+interface Props {
+  items: CartItem[]
+}
+
+export default function CheckoutSummary({ items }: Props) {
+  const subtotal = items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  )
+
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0)
+
   return (
     <aside className="sticky top-24 self-start overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 p-8">
-        <h2 className="text-2xl font-bold text-slate-900">
-          Order Summary
-        </h2>
+        <h2 className="text-2xl font-bold text-slate-900">Order Summary</h2>
 
         <p className="mt-2 text-sm text-slate-500">
-          2 Items
+          {totalItems} Item{totalItems !== 1 && "s"}
         </p>
       </div>
 
       <div className="space-y-5 p-8">
-        {[1, 2].map((item) => (
-          <div
-            key={item}
-            className="flex gap-4"
-          >
+        {items.map((item) => (
+          <div key={`${item.id}-${item.variantId}`} className="flex gap-4">
             <div className="relative h-16 w-16 rounded-xl bg-slate-100">
               <Image
-                src="/products/chain-lube/1.webp"
-                alt=""
+                src={item.image}
+                alt={item.name}
                 fill
                 className="object-contain p-2"
               />
@@ -31,17 +41,15 @@ export default function CheckoutSummary() {
 
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-slate-900">
-                Bike Chain Lubricant
+                {item.name}
               </h3>
 
               <p className="text-xs text-slate-500">
-                500 ml
+                {item.variantName} × {item.quantity}
               </p>
             </div>
 
-            <p className="font-semibold">
-              ₹399
-            </p>
+            <p className="font-semibold">₹{item.price * item.quantity}</p>
           </div>
         ))}
       </div>
@@ -50,14 +58,12 @@ export default function CheckoutSummary() {
         <div className="space-y-4">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>₹798</span>
+            <span>₹{subtotal}</span>
           </div>
 
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span className="text-green-600 font-medium">
-              FREE
-            </span>
+            <span className="font-medium text-green-600">FREE</span>
           </div>
 
           <div className="flex justify-between">
@@ -65,9 +71,9 @@ export default function CheckoutSummary() {
             <span>₹0</span>
           </div>
 
-          <div className="border-t pt-5 mt-5 flex justify-between text-xl font-bold">
+          <div className="mt-5 flex justify-between border-t pt-5 text-xl font-bold">
             <span>Total</span>
-            <span>₹798</span>
+            <span>₹{subtotal}</span>
           </div>
         </div>
 

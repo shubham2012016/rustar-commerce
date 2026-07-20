@@ -1,22 +1,24 @@
 "use client"
 
 import { Minus, Plus } from "lucide-react"
-import { useState } from "react"
 
+import { useProduct } from "@/components/product/context/ProductContext"
 import { PRODUCT } from "@/data/products/product.data"
 
 export default function QuantitySelector() {
-  const [quantity, setQuantity] = useState(1)
+  const { quantity, setQuantity } = useProduct()
 
   function decrease() {
-    setQuantity((prev) => Math.max(1, prev - 1))
+    setQuantity(Math.max(1, quantity - 1))
   }
 
   function increase() {
-    setQuantity((prev) => Math.min(PRODUCT.stock, prev + 1))
+    setQuantity(Math.min(PRODUCT.stock, quantity + 1))
   }
 
-  function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleInputChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
     const value = Number(event.target.value)
 
     if (Number.isNaN(value)) return
@@ -27,9 +29,13 @@ export default function QuantitySelector() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-900">Quantity</h3>
+        <h3 className="text-lg font-bold text-slate-900">
+          Quantity
+        </h3>
 
-        <span className="text-sm text-slate-500">Max {PRODUCT.stock}</span>
+        <span className="text-sm text-slate-500">
+          Max {PRODUCT.stock}
+        </span>
       </div>
 
       <div className="inline-flex items-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

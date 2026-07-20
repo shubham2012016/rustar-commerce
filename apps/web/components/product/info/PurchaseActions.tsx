@@ -1,35 +1,77 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 import { Heart, Loader2, ShoppingCart, ShieldCheck, Zap } from "lucide-react"
 
+import { useProduct } from "@/components/product/context/ProductContext"
+import { PRODUCT } from "@/data/products/product.data"
+import { useCartStore, useCheckoutStore } from "@/store"
+
 export default function PurchaseActions() {
+  const router = useRouter()
+
   const [loading, setLoading] = useState(false)
+
+  const { quantity, selectedVariant } = useProduct()
+
+  const addItem = useCartStore((state) => state.addItem)
+
+  const setCheckoutItems = useCheckoutStore((state) => state.setItems)
 
   async function handleAddToCart() {
     setLoading(true)
 
-    // TODO:
-    // Connect Zustand Cart Store
+    const variant = PRODUCT.variants.find((v) => v.id === selectedVariant)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (!variant) {
+      setLoading(false)
+      return
+    }
+
+    addItem({
+      id: PRODUCT.id,
+      slug: PRODUCT.slug,
+      sku: PRODUCT.sku,
+      name: PRODUCT.name,
+      image: PRODUCT.images[0]?.url ?? "",
+      price: PRODUCT.price,
+      quantity,
+      variantId: variant.id,
+      variantName: variant.value,
+      stock: PRODUCT.stock,
+    })
 
     setLoading(false)
   }
 
   function handleBuyNow() {
-    // TODO:
-    // Checkout Flow
+    const variant = PRODUCT.variants.find((v) => v.id === selectedVariant)
+
+    if (!variant) return
+
+    setCheckoutItems([
+      {
+        id: PRODUCT.id,
+        slug: PRODUCT.slug,
+        sku: PRODUCT.sku,
+        name: PRODUCT.name,
+        image: PRODUCT.images[0]?.url ?? "",
+        price: PRODUCT.price,
+        quantity,
+        variantId: variant.id,
+        variantName: variant.value,
+        stock: PRODUCT.stock,
+      },
+    ])
+
+    router.push("/checkout")
   }
 
   return (
     <section className="space-y-5">
-      {/* Buttons */}
-
       <div className="grid gap-4 md:grid-cols-[1fr_1fr_64px]">
-        {/* Add To Cart */}
-
         <button
           type="button"
           onClick={handleAddToCart}
@@ -49,8 +91,6 @@ export default function PurchaseActions() {
           )}
         </button>
 
-        {/* Buy Now */}
-
         <button
           type="button"
           onClick={handleBuyNow}
@@ -59,8 +99,6 @@ export default function PurchaseActions() {
           <Zap className="h-5 w-5" />
           Buy Now
         </button>
-
-        {/* Wishlist */}
 
         <button
           type="button"
@@ -71,14 +109,12 @@ export default function PurchaseActions() {
         </button>
       </div>
 
-      {/* Secure Checkout */}
-
       <div className="flex items-center justify-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
         <ShieldCheck className="h-5 w-5 text-emerald-600" />
 
         <span className="text-sm font-medium text-emerald-700">
           Secure Checkout • SSL Encrypted • Trusted Payments
-        </span>
+        </span> 
       </div>
     </section>
   )
