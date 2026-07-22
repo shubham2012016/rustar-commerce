@@ -3,10 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { Heart, Loader2, ShoppingCart, ShieldCheck, Zap } from "lucide-react"
+import { Heart, Loader2, ShieldCheck, ShoppingCart, Zap } from "lucide-react"
 
 import { useProduct } from "@/components/product/context/ProductContext"
-import { PRODUCT } from "@/data/products/product.data"
 import { useCartStore, useCheckoutStore } from "@/store"
 
 export default function PurchaseActions() {
@@ -14,7 +13,7 @@ export default function PurchaseActions() {
 
   const [loading, setLoading] = useState(false)
 
-  const { quantity, selectedVariant } = useProduct()
+  const { product, quantity, selectedVariant } = useProduct()
 
   const addItem = useCartStore((state) => state.addItem)
 
@@ -23,46 +22,35 @@ export default function PurchaseActions() {
   async function handleAddToCart() {
     setLoading(true)
 
-    const variant = PRODUCT.variants.find((v) => v.id === selectedVariant)
-
-    if (!variant) {
-      setLoading(false)
-      return
-    }
-
     addItem({
-      id: PRODUCT.id,
-      slug: PRODUCT.slug,
-      sku: PRODUCT.sku,
-      name: PRODUCT.name,
-      image: PRODUCT.images[0]?.url ?? "",
-      price: PRODUCT.price,
+      id: product.id,
+      slug: product.slug,
+      sku: selectedVariant.sku,
+      name: product.name,
+      image: product.images[0]?.url ?? "",
+      price: selectedVariant.price,
       quantity,
-      variantId: variant.id,
-      variantName: variant.value,
-      stock: PRODUCT.stock,
+      variantId: selectedVariant.id,
+      variantName: selectedVariant.value,
+      stock: selectedVariant.stock,
     })
 
     setLoading(false)
   }
 
   function handleBuyNow() {
-    const variant = PRODUCT.variants.find((v) => v.id === selectedVariant)
-
-    if (!variant) return
-
     setCheckoutItems([
       {
-        id: PRODUCT.id,
-        slug: PRODUCT.slug,
-        sku: PRODUCT.sku,
-        name: PRODUCT.name,
-        image: PRODUCT.images[0]?.url ?? "",
-        price: PRODUCT.price,
+        id: product.id,
+        slug: product.slug,
+        sku: selectedVariant.sku,
+        name: product.name,
+        image: product.images[0]?.url ?? "",
+        price: selectedVariant.price,
         quantity,
-        variantId: variant.id,
-        variantName: variant.value,
-        stock: PRODUCT.stock,
+        variantId: selectedVariant.id,
+        variantName: selectedVariant.value,
+        stock: selectedVariant.stock,
       },
     ])
 
@@ -114,7 +102,7 @@ export default function PurchaseActions() {
 
         <span className="text-sm font-medium text-emerald-700">
           Secure Checkout • SSL Encrypted • Trusted Payments
-        </span> 
+        </span>
       </div>
     </section>
   )

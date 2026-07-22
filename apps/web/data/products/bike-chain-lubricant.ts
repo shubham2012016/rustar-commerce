@@ -1,86 +1,48 @@
 import type { Product } from "@/types"
 
 export const bikeChainLubricant: Product = {
-  id: "bike-chain-lubricant-500ml",
+  id: "chain-lubricant",
 
-  slug: "bike-chain-lubricant-500ml",
+  slug: "chain-lubricant",
 
-  sku: "RC-BCL-500",
-
-  name: "Rustar Chem Premium Bike Chain Lubricant 500ml",
+  name: "Rustar Chain Lubricant",
 
   shortDescription:
-    "Advanced synthetic chain lubricant engineered for smooth performance, reduced friction and long-lasting protection.",
+    "High-performance chain lubricant that reduces friction, minimizes wear and protects against rust in all riding conditions.",
 
   description:
-    "Rustar Chem Premium Bike Chain Lubricant is specially formulated to reduce friction, prevent rust, repel dirt and provide long-lasting lubrication for motorcycles and bicycles under all weather conditions.",
+    "Rustar Chain Lubricant is specially engineered for motorcycles and bicycles. The advanced anti-wear formula penetrates deep into chain links, reduces friction, prevents corrosion and delivers smooth power transmission while resisting water, dust and road contaminants.",
 
   brand: "Rustar Chem",
 
   category: "Bike Care",
 
-  price: 399,
-
-  compareAtPrice: 499,
-
   currency: "INR",
 
-  rating: 4.8,
+  defaultVariantId: "500ml",
 
-  reviewCount: 1264,
+  rating: 4.9,
 
-  stock: 84,
+  reviewCount: 1847,
 
   images: [
     {
       id: "1",
-      url: "/products/chain-lube/1.webp",
-      alt: "Front View",
-    },
-    {
-      id: "2",
-      url: "/products/chain-lube/2.webp",
-      alt: "Back View",
-    },
-    {
-      id: "3",
-      url: "/products/chain-lube/3.webp",
-      alt: "45 Degree View",
-    },
-    {
-      id: "4",
-      url: "/products/chain-lube/4.webp",
-      alt: "Usage",
-    },
-    {
-      id: "5",
-      url: "/products/chain-lube/5.webp",
-      alt: "Bottle Closeup",
-    },
-    {
-      id: "6",
-      url: "/products/chain-lube/6.webp",
-      alt: "Packaging",
+      url: "public/products/chain-lubricant/1.webp",
+      alt: "Rustar Chain Lubricant",
+      isPrimary: true,
     },
   ],
 
   variants: [
     {
-      id: "100",
-      name: "Size",
-      value: "250 ml",
-      inStock: true,
-    },
-    {
-      id: "101",
+      id: "500ml",
+      sku: "RC-CL-500ML",
       name: "Size",
       value: "500 ml",
-      inStock: true,
-    },
-    {
-      id: "102",
-      name: "Size",
-      value: "1 Litre",
+      price: 450,
+      compareAtPrice: 549,
+      stock: 125,
       inStock: true,
     },
   ],
@@ -89,26 +51,27 @@ export const bikeChainLubricant: Product = {
     {
       id: "1",
       title: "Long Lasting Lubrication",
-      description: "Provides smooth lubrication even during long rides.",
+      description:
+        "Maintains smooth chain movement for longer riding intervals.",
       icon: "Shield",
     },
     {
       id: "2",
       title: "Rust Protection",
-      description: "Creates a protective layer against moisture and corrosion.",
+      description: "Forms a protective coating against moisture and corrosion.",
       icon: "Droplets",
     },
     {
       id: "3",
-      title: "Dust Resistant Formula",
-      description: "Reduces dirt build-up for cleaner chain performance.",
+      title: "Dust Resistant",
+      description: "Helps reduce dust and dirt accumulation on the chain.",
       icon: "Wind",
     },
     {
       id: "4",
-      title: "High Temperature Stability",
-      description: "Performs consistently even in extreme riding conditions.",
-      icon: "Flame",
+      title: "Smooth Performance",
+      description: "Improves gear shifting and reduces drivetrain noise.",
+      icon: "Zap",
     },
   ],
 
@@ -122,8 +85,8 @@ export const bikeChainLubricant: Product = {
       value: "Chain Lubricant",
     },
     {
-      label: "Vehicle Type",
-      value: "Motorcycle & Bicycle",
+      label: "Suitable For",
+      value: "Motorcycles & Bicycles",
     },
     {
       label: "Net Quantity",
@@ -144,19 +107,19 @@ export const bikeChainLubricant: Product = {
       id: "1",
       question: "How often should I lubricate my chain?",
       answer:
-        "For regular city riding, every 500–700 km is recommended. Clean the chain before each application.",
+        "For regular riding, lubricate every 500–700 km or after riding in rain or muddy conditions.",
     },
     {
       id: "2",
-      question: "Can this lubricant be used during monsoon?",
+      question: "Can I use it on O-ring chains?",
       answer:
-        "Yes. It is formulated to resist water wash-off and provide excellent protection during wet conditions.",
+        "Yes. The lubricant is suitable for standard, O-ring and X-ring chains.",
     },
     {
       id: "3",
-      question: "Does it prevent rust?",
+      question: "Should I clean the chain before use?",
       answer:
-        "Yes. It forms a protective anti-corrosion coating over the chain.",
+        "Yes. Cleaning the chain before lubrication provides the best performance and longer chain life.",
     },
   ],
 
@@ -165,59 +128,66 @@ export const bikeChainLubricant: Product = {
       id: "1",
       customerName: "Rahul Sharma",
       rating: 5,
-      title: "Excellent Chain Lubricant",
+      title: "Excellent Performance",
       review:
-        "The chain became noticeably smoother after one application. Highly recommended.",
+        "The chain feels much smoother and quieter after using this lubricant.",
       verified: true,
-      createdAt: "2026-07-10",
+      createdAt: "2026-07-12",
     },
     {
       id: "2",
       customerName: "Aman Verma",
       rating: 5,
-      title: "Worth the Price",
+      title: "Highly Recommended",
       review:
-        "Very little dirt accumulation compared to my previous lubricant.",
+        "Great protection during rainy rides. Dirt buildup is noticeably lower.",
       verified: true,
-      createdAt: "2026-07-08",
+      createdAt: "2026-07-09",
     },
     {
       id: "3",
       customerName: "Rohit Singh",
       rating: 4,
-      title: "Good Product",
-      review: "Smooth shifting and quieter chain after using it.",
+      title: "Good Quality",
+      review: "Easy to apply and lasts longer than other lubricants I've used.",
       verified: true,
-      createdAt: "2026-07-02",
+      createdAt: "2026-07-05",
     },
   ],
 
   ratingDistribution: [
     {
       stars: 5,
-      count: 1034,
+      count: 1515,
     },
     {
       stars: 4,
-      count: 167,
+      count: 220,
     },
     {
       stars: 3,
-      count: 39,
+      count: 71,
     },
     {
       stars: 2,
-      count: 14,
+      count: 25,
     },
     {
       stars: 1,
-      count: 10,
+      count: 16,
     },
   ],
 
-  tags: ["Best Seller", "Bike Care", "Chain Lube", "Premium", "Made in India"],
+  tags: [
+    "Bike Care",
+    "Chain Lubricant",
+    "Premium",
+    "Anti Rust",
+    "Made in India",
+  ],
 
   badges: [
+    "Best Seller",
     "Free Shipping",
     "Cash on Delivery",
     "Secure Payments",

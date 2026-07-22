@@ -8,12 +8,12 @@ import {
   type ReactNode,
 } from "react"
 
-import type { Product } from "@/types"
+import type { Product, ProductVariant } from "@/types"
 
 interface ProductContextValue {
   product: Product
 
-  selectedVariant: string
+  selectedVariant: ProductVariant
   setSelectedVariant: (variantId: string) => void
 
   quantity: number
@@ -28,17 +28,21 @@ interface ProductProviderProps {
 }
 
 export function ProductProvider({ product, children }: ProductProviderProps) {
-  const [selectedVariant, setSelectedVariant] = useState(
-    product.variants[0]?.id ?? ""
+  const [selectedVariantId, setSelectedVariantId] = useState(
+    product.defaultVariantId || product.variants[0]?.id || ""
   )
 
   const [quantity, setQuantity] = useState(1)
+
+  const selectedVariant =
+    product.variants.find((variant) => variant.id === selectedVariantId) ??
+    product.variants[0]
 
   const value = useMemo(
     () => ({
       product,
       selectedVariant,
-      setSelectedVariant,
+      setSelectedVariant: setSelectedVariantId,
       quantity,
       setQuantity,
     }),

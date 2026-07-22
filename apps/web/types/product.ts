@@ -2,12 +2,24 @@ export interface ProductImage {
   id: string
   url: string
   alt: string
+  isPrimary?: boolean
 }
 
 export interface ProductVariant {
   id: string
+
+  sku: string
+
   name: string
+
   value: string
+
+  price: number
+
+  compareAtPrice?: number
+
+  stock: number
+
   inStock: boolean
 }
 
@@ -50,8 +62,6 @@ export interface Product {
 
   slug: string
 
-  sku: string
-
   name: string
 
   shortDescription: string
@@ -62,17 +72,13 @@ export interface Product {
 
   category: string
 
-  price: number
-
-  compareAtPrice?: number
-
   currency: "INR"
+
+  defaultVariantId: string
 
   rating: number
 
   reviewCount: number
-
-  stock: number
 
   images: ProductImage[]
 

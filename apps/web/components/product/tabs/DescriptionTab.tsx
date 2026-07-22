@@ -1,9 +1,13 @@
-import { PRODUCT } from "@/data/products/product.data"
+"use client"
+
+import { useProduct } from "@/components/product/context/ProductContext"  
 
 export default function DescriptionTab() {
+  const { product } = useProduct()
+
   return (
     <article className="prose prose-slate max-w-none">
-      <p>{PRODUCT.description}</p>
+      <p>{product.description}</p>
     </article>
   )
 }

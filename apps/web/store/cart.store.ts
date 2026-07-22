@@ -12,6 +12,9 @@ export const useCartStore = create<CartState>()(
 
       addItem: (item) =>
         set((state) => {
+          console.log("ADDING TO CART:", item)
+          console.log("STATE BEFORE", state.items)
+          console.log("ADDING", item)
           const existingItem = state.items.find(
             (cartItem) =>
               cartItem.id === item.id && cartItem.variantId === item.variantId
@@ -29,7 +32,9 @@ export const useCartStore = create<CartState>()(
               ),
             }
           }
-
+          console.log("STATE AFTER", {
+            items: [...state.items, item],
+          })
           return {
             items: [...state.items, item],
           }

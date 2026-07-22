@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { PRODUCT } from "@/data/products/product.data"
+import { useProduct } from "@/components/product/context/ProductContext"
 
 import GalleryActions from "./GalleryActions"
 import ImageLightbox from "./ImageLightbox"
@@ -10,7 +10,8 @@ import ImageThumbnail from "./ImageThumbnail"
 import ImageZoom from "./ImageZoom"
 
 export default function ImageGallery() {
-  const images = PRODUCT.images
+  const { product } = useProduct()
+  const images = product.images
 
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -53,8 +54,8 @@ export default function ImageGallery() {
               onShare={() => {
                 if (navigator.share) {
                   navigator.share({
-                    title: PRODUCT.name,
-                    text: PRODUCT.shortDescription,
+                    title: product.name,
+                    text: product.shortDescription,
                     url: window.location.href,
                   })
                 } else {

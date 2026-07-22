@@ -1,40 +1,36 @@
 "use client"
 
+import { ChangeEvent } from "react"
 import { Minus, Plus } from "lucide-react"
 
 import { useProduct } from "@/components/product/context/ProductContext"
-import { PRODUCT } from "@/data/products/product.data"
 
 export default function QuantitySelector() {
-  const { quantity, setQuantity } = useProduct()
+  const { selectedVariant, quantity, setQuantity } = useProduct()
 
   function decrease() {
     setQuantity(Math.max(1, quantity - 1))
   }
 
   function increase() {
-    setQuantity(Math.min(PRODUCT.stock, quantity + 1))
+    setQuantity(Math.min(selectedVariant.stock, quantity + 1))
   }
 
-  function handleInputChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
     const value = Number(event.target.value)
 
     if (Number.isNaN(value)) return
 
-    setQuantity(Math.min(PRODUCT.stock, Math.max(1, value)))
+    setQuantity(Math.min(selectedVariant.stock, Math.max(1, value)))
   }
 
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-900">
-          Quantity
-        </h3>
+        <h3 className="text-lg font-bold text-slate-900">Quantity</h3>
 
         <span className="text-sm text-slate-500">
-          Max {PRODUCT.stock}
+          Max {selectedVariant.stock}
         </span>
       </div>
 
@@ -51,7 +47,7 @@ export default function QuantitySelector() {
         <input
           type="number"
           min={1}
-          max={PRODUCT.stock}
+          max={selectedVariant.stock}
           value={quantity}
           onChange={handleInputChange}
           className="h-14 w-20 border-x border-slate-200 text-center text-lg font-semibold outline-none"
@@ -60,7 +56,7 @@ export default function QuantitySelector() {
         <button
           type="button"
           onClick={increase}
-          disabled={quantity >= PRODUCT.stock}
+          disabled={quantity >= selectedVariant.stock}
           className="flex h-14 w-14 items-center justify-center transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus className="h-5 w-5" />

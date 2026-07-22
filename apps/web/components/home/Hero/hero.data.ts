@@ -5,7 +5,7 @@ export const heroProducts: HeroProduct[] = [
     id: "1",
     name: "Bike Shampoo",
     slug: "bike-shampoo",
-    image: "/products/car_bike_shampoo.webp",
+    image: "/products/bike-shampoo/1.webp",
     price: 299,
     originalPrice: 399,
     rating: 4.8,
@@ -20,7 +20,7 @@ export const heroProducts: HeroProduct[] = [
     id: "2",
     name: "Chain Lube",
     slug: "chain-lube",
-    image: "/products/chain_lube.webp",
+    image: "/products/chain-lubricant/1.webp",
     price: 349,
     originalPrice: 449,
     rating: 4.9,
@@ -35,7 +35,7 @@ export const heroProducts: HeroProduct[] = [
     id: "3",
     name: "Dashboard Polish",
     slug: "dashboard-polish",
-    image: "/products/all_in_liquid_polish.webp",
+    image: "/products/dashboard-polish/1.webp",
     price: 249,
     originalPrice: 329,
     rating: 4.7,
@@ -48,7 +48,7 @@ export const heroSlides: HeroSlide[] = [
     id: "1",
     title: "Premium Care",
     subtitle: "Professional detailing products for cars and bikes.",
-    image: "/products/car_bike_shampoo.webp",
+    image: "/products/bike-shampoo/1.webp",
 
     primaryButton: {
       label: "Shop Now",
@@ -66,7 +66,7 @@ export const heroSlides: HeroSlide[] = [
     id: "2",
     title: "Chain Lubricants",
     subtitle: "Reduce wear and improve chain life.",
-    image: "/products/chain_lube.webp",
+    image: "/products/chain-lubricant/1.webp",
 
     primaryButton: {
       label: "Buy Now",
@@ -84,7 +84,7 @@ export const heroSlides: HeroSlide[] = [
     id: "3",
     title: "Dashboard Polish",
     subtitle: "Restore shine and protect interiors.",
-    image: "/products/all_in_liquid_polish.webp",
+    image: "/products/dashboard-polish/1.webp",
 
     primaryButton: {
       label: "Shop",

@@ -7,6 +7,8 @@ import CartItem from "./CartItem"
 export default function CartItems() {
   const items = useCartStore((state) => state.items)
 
+  console.log("CART ITEMS:", items)
+
   if (items.length === 0) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">

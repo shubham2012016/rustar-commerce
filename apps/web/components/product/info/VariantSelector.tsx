@@ -3,10 +3,9 @@
 import clsx from "clsx"
 
 import { useProduct } from "@/components/product/context/ProductContext"
-import { PRODUCT } from "@/data/products/product.data"
 
 export default function VariantSelector() {
-  const { selectedVariant, setSelectedVariant } = useProduct()
+  const { product, selectedVariant, setSelectedVariant } = useProduct()
 
   return (
     <section className="space-y-5">
@@ -14,13 +13,13 @@ export default function VariantSelector() {
         <h3 className="text-lg font-bold text-slate-900">Select Size</h3>
 
         <span className="text-sm text-slate-500">
-          {PRODUCT.variants.length} Options
+          {product.variants.length} Options
         </span>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {PRODUCT.variants.map((variant) => {
-          const selected = selectedVariant === variant.id
+        {product.variants.map((variant) => {
+          const selected = selectedVariant.id === variant.id
 
           return (
             <button

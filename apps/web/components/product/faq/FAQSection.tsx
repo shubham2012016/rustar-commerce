@@ -1,8 +1,12 @@
-import { PRODUCT } from "@/data/products/product.data"
+"use client"
+
+import { useProduct } from "@/components/product/context/ProductContext"
 
 import FAQItem from "./FAQItem"
 
 export default function FAQSection() {
+  const { product } = useProduct()
+
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
       <div className="mb-12 text-center">
@@ -20,12 +24,8 @@ export default function FAQSection() {
       </div>
 
       <div className="space-y-5">
-        {PRODUCT.faqs.map((faq) => (
-          <FAQItem
-            key={faq.id}
-            question={faq.question}
-            answer={faq.answer}
-          />
+        {product.faqs.map((faq) => (
+          <FAQItem key={faq.id} question={faq.question} answer={faq.answer} />
         ))}
       </div>
     </section>

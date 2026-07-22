@@ -1,8 +1,10 @@
+"use client"
 import { CheckCircle, Star } from "lucide-react"
 
-import { PRODUCT } from "@/data/products/product.data"
+import { useProduct } from "@/components/product/context/ProductContext"
 
 export default function ProductHeader() {
+  const { product } = useProduct()
   return (
     <section className="space-y-6">
       {/* Brand */}
@@ -11,20 +13,20 @@ export default function ProductHeader() {
         <CheckCircle className="h-4 w-4 text-blue-600" />
 
         <span className="text-sm font-semibold text-blue-700">
-          {PRODUCT.brand}
+          {product.brand}
         </span>
       </div>
 
       {/* Product Name */}
 
       <h1 className="text-4xl leading-tight font-black tracking-tight text-slate-900 lg:text-5xl">
-        {PRODUCT.name}
+        {product.name}
       </h1>
 
       {/* Short Description */}
 
       <p className="max-w-2xl text-lg leading-8 text-slate-600">
-        {PRODUCT.shortDescription}
+        {product.shortDescription}
       </p>
 
       {/* Rating */}
@@ -39,17 +41,17 @@ export default function ProductHeader() {
           ))}
         </div>
 
-        <span className="font-semibold text-slate-900">{PRODUCT.rating}</span>
+        <span className="font-semibold text-slate-900">{product.rating}</span>
 
         <span className="text-slate-500">
-          ({PRODUCT.reviewCount.toLocaleString()} Reviews)
+          ({product.reviewCount.toLocaleString()} Reviews)
         </span>
       </div>
 
       {/* Tags */}
 
       <div className="flex flex-wrap gap-3">
-        {PRODUCT.tags.map((tag) => (
+        {product.tags.map((tag) => (
           <span
             key={tag}
             className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700"

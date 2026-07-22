@@ -1,7 +1,11 @@
-import { PRODUCT } from "@/data/products/product.data"
+"use client"
+
+import { useProduct } from "@/components/product/context/ProductContext"
 
 export default function RatingDistribution() {
-  const total = PRODUCT.ratingDistribution.reduce(
+  const { product } = useProduct()
+
+  const total = product.ratingDistribution.reduce(
     (sum, item) => sum + item.count,
     0
   )
@@ -13,7 +17,7 @@ export default function RatingDistribution() {
       </h2>
 
       <div className="space-y-5">
-        {PRODUCT.ratingDistribution
+        {product.ratingDistribution
           .slice()
           .sort((a, b) => b.stars - a.stars)
           .map((item) => {
@@ -47,4 +51,4 @@ export default function RatingDistribution() {
       </div>
     </section>
   )
-}
+} 

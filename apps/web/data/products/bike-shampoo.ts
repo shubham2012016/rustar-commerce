@@ -5,82 +5,44 @@ export const bikeShampoo: Product = {
 
   slug: "bike-shampoo",
 
-  sku: "RC-BS-500",
-
-  name: "Rustar Chem Bike Shampoo",
+  name: "Rustar Car & Bike Shampoo",
 
   shortDescription:
-    "Advanced synthetic chain lubricant engineered for smooth performance, reduced friction and long-lasting protection.",
+    "Premium concentrated shampoo that removes dirt, grease, mud and road grime while preserving your vehicle's paint finish.",
 
   description:
-    "Rustar Chem Premium Bike Chain Lubricant is specially formulated to reduce friction, prevent rust, repel dirt and provide long-lasting lubrication for motorcycles and bicycles under all weather conditions.",
+    "Rustar Car & Bike Shampoo is a high-foaming cleaning solution designed for motorcycles, scooters and cars. Its advanced formula lifts stubborn dirt and traffic film without damaging paint, plastic, rubber or chrome surfaces. Suitable for regular washing and leaves a clean glossy finish.",
 
   brand: "Rustar Chem",
 
-  category: "Bike Care",
-
-  price: 399,
-
-  compareAtPrice: 499,
+  category: "Vehicle Care",
 
   currency: "INR",
 
+  defaultVariantId: "500ml",
+
   rating: 4.8,
 
-  reviewCount: 1264,
-
-  stock: 84,
+  reviewCount: 1236,
 
   images: [
     {
       id: "1",
-      url: "/products/chain-lube/1.webp",
-      alt: "Front View",
-    },
-    {
-      id: "2",
-      url: "/products/chain-lube/2.webp",
-      alt: "Back View",
-    },
-    {
-      id: "3",
-      url: "/products/chain-lube/3.webp",
-      alt: "45 Degree View",
-    },
-    {
-      id: "4",
-      url: "/products/chain-lube/4.webp",
-      alt: "Usage",
-    },
-    {
-      id: "5",
-      url: "/products/chain-lube/5.webp",
-      alt: "Bottle Closeup",
-    },
-    {
-      id: "6",
-      url: "/products/chain-lube/6.webp",
-      alt: "Packaging",
+      url: "/products/bike-shampoo/1.webp",
+      alt: "Rustar Car & Bike Shampoo",
+      isPrimary: true,
     },
   ],
 
   variants: [
     {
-      id: "100",
-      name: "Size",
-      value: "250 ml",
-      inStock: true,
-    },
-    {
-      id: "101",
+      id: "500ml",
+      sku: "RC-BS-500ML",
       name: "Size",
       value: "500 ml",
-      inStock: true,
-    },
-    {
-      id: "102",
-      name: "Size",
-      value: "1 Litre",
+      price: 500,
+      compareAtPrice: 599,
+      stock: 100,
       inStock: true,
     },
   ],
@@ -88,27 +50,31 @@ export const bikeShampoo: Product = {
   features: [
     {
       id: "1",
-      title: "Long Lasting Lubrication",
-      description: "Provides smooth lubrication even during long rides.",
-      icon: "Shield",
-    },
-    {
-      id: "2",
-      title: "Rust Protection",
-      description: "Creates a protective layer against moisture and corrosion.",
+      title: "Rich Foam Formula",
+      description:
+        "Produces thick foam that loosens dirt and road grime effectively.",
       icon: "Droplets",
     },
     {
+      id: "2",
+      title: "Safe On Paint",
+      description:
+        "Gentle cleaning formula that helps maintain paint shine and finish.",
+      icon: "Shield",
+    },
+    {
       id: "3",
-      title: "Dust Resistant Formula",
-      description: "Reduces dirt build-up for cleaner chain performance.",
-      icon: "Wind",
+      title: "Multi Surface Cleaning",
+      description:
+        "Suitable for painted surfaces, plastic panels, chrome and alloy wheels.",
+      icon: "Sparkles",
     },
     {
       id: "4",
-      title: "High Temperature Stability",
-      description: "Performs consistently even in extreme riding conditions.",
-      icon: "Flame",
+      title: "Easy To Rinse",
+      description:
+        "Leaves minimal residue and rinses away quickly with clean water.",
+      icon: "Waves",
     },
   ],
 
@@ -119,15 +85,15 @@ export const bikeShampoo: Product = {
     },
     {
       label: "Product Type",
-      value: "Chain Lubricant",
-    },
-    {
-      label: "Vehicle Type",
-      value: "Motorcycle & Bicycle",
+      value: "Car & Bike Shampoo",
     },
     {
       label: "Net Quantity",
       value: "500 ml",
+    },
+    {
+      label: "Suitable For",
+      value: "Cars, Motorcycles & Scooters",
     },
     {
       label: "Country of Origin",
@@ -142,21 +108,21 @@ export const bikeShampoo: Product = {
   faqs: [
     {
       id: "1",
-      question: "How often should I lubricate my chain?",
+      question: "Can it be used on cars and bikes?",
       answer:
-        "For regular city riding, every 500–700 km is recommended. Clean the chain before each application.",
+        "Yes. It is formulated for motorcycles, scooters, hatchbacks, sedans and SUVs.",
     },
     {
       id: "2",
-      question: "Can this lubricant be used during monsoon?",
+      question: "Will it damage paint or ceramic coating?",
       answer:
-        "Yes. It is formulated to resist water wash-off and provide excellent protection during wet conditions.",
+        "No. It is designed to clean effectively while being safe on painted surfaces when used as directed.",
     },
     {
       id: "3",
-      question: "Does it prevent rust?",
+      question: "Does it remove mud and grease?",
       answer:
-        "Yes. It forms a protective anti-corrosion coating over the chain.",
+        "Yes. The concentrated formula helps lift mud, grease, dust and road grime with ease.",
     },
   ],
 
@@ -165,9 +131,9 @@ export const bikeShampoo: Product = {
       id: "1",
       customerName: "Rahul Sharma",
       rating: 5,
-      title: "Excellent Chain Lubricant",
+      title: "Excellent Cleaning",
       review:
-        "The chain became noticeably smoother after one application. Highly recommended.",
+        "Very rich foam and the bike looks shiny after every wash. Highly recommended.",
       verified: true,
       createdAt: "2026-07-10",
     },
@@ -175,9 +141,9 @@ export const bikeShampoo: Product = {
       id: "2",
       customerName: "Aman Verma",
       rating: 5,
-      title: "Worth the Price",
+      title: "Worth Buying",
       review:
-        "Very little dirt accumulation compared to my previous lubricant.",
+        "Removes stubborn dirt easily and doesn't leave white marks after drying.",
       verified: true,
       createdAt: "2026-07-08",
     },
@@ -186,38 +152,46 @@ export const bikeShampoo: Product = {
       customerName: "Rohit Singh",
       rating: 4,
       title: "Good Product",
-      review: "Smooth shifting and quieter chain after using it.",
+      review:
+        "Nice fragrance, good foam and safe for regular washing.",
       verified: true,
-      createdAt: "2026-07-02",
+      createdAt: "2026-07-04",
     },
   ],
 
   ratingDistribution: [
     {
       stars: 5,
-      count: 1034,
+      count: 1012,
     },
     {
       stars: 4,
-      count: 167,
+      count: 156,
     },
     {
       stars: 3,
-      count: 39,
+      count: 41,
     },
     {
       stars: 2,
-      count: 14,
+      count: 15,
     },
     {
       stars: 1,
-      count: 10,
+      count: 12,
     },
   ],
 
-  tags: ["Best Seller", "Bike Care", "Chain Lube", "Premium", "Made in India"],
+  tags: [
+    "Car Care",
+    "Bike Care",
+    "Vehicle Shampoo",
+    "Premium",
+    "Made in India",
+  ],
 
   badges: [
+    "Best Seller",
     "Free Shipping",
     "Cash on Delivery",
     "Secure Payments",
