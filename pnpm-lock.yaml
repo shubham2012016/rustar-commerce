@@ -37,8 +37,8 @@ importers:
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.81.0(react@19.1.0))
       '@medusajs/js-sdk':
-        specifier: ^2.18.0
-        version: 2.18.0
+        specifier: ^2.17.2
+        version: 2.17.2
       '@medusajs/types':
         specifier: ^2.18.0
         version: 2.18.0
@@ -585,8 +585,8 @@ packages:
       eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.0'
 
-  '@medusajs/js-sdk@2.18.0':
-    resolution: {integrity: sha512-ul9DXLP3GHyAvr9S5qizlfLi9nUlV8g8u1ulcaOxVzsNqifydlAYy+ReOGqmq/+taxQaI/gAOQq+tOfZuQPNeQ==}
+  '@medusajs/js-sdk@2.17.2':
+    resolution: {integrity: sha512-7NeHXfgCfC2m1Wyuvjh+oTVC/U1iJRKhgsvEFJj43jXXHWl2Yno+1d86SH3M18WlKlswv11EqE1gB7q7rSPsmg==}
     engines: {node: '>=20'}
 
   '@medusajs/types@2.18.0':
@@ -3729,7 +3729,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@medusajs/js-sdk@2.18.0':
+  '@medusajs/js-sdk@2.17.2':
     dependencies:
       fetch-event-stream: 0.1.6
       qs: 6.15.3
