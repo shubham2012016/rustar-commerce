@@ -1,9 +1,33 @@
 import { ArrowRight, Sparkles } from "lucide-react"
 
-import { bestSellerProducts } from "./bestSeller.data"
-import ProductCard from "./ProductCard"
+import { getProducts } from "@/lib/data/products"
+import { mapProduct } from "@/lib/mappers/product"
 
-export default function BestSellers() {
+import ProductCard from "./ProductCard"
+import type { Product } from "./types"
+
+export default async function BestSellers() {
+  const medusaProducts = await getProducts(6)
+
+  const products: Product[] = medusaProducts.map((product) => {
+    const p = mapProduct(product)
+    const variant = p.variants[0]
+
+    return {
+      id: Number(p.id),
+      name: p.name,
+      slug: p.slug,
+      image: p.images[0]?.url ?? "/placeholder.png",
+      brand: p.brand,
+      price: variant?.price ?? 0,
+      originalPrice: variant?.compareAtPrice ?? variant?.price ?? 0,
+      rating: p.rating,
+      reviews: p.reviewCount,
+      badge: p.badges[0],
+      inStock: variant?.inStock ?? true,
+    }
+  })
+
   return (
     <section className="relative overflow-hidden py-24">
       {/* Background */}
@@ -46,7 +70,7 @@ export default function BestSellers() {
 
         {/* Products */}
         <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
-          {bestSellerProducts.map((product) => (
+          {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
-import { PRODUCTS } from "@/data/products"
+import { getProduct } from "@/lib/data/products"
+import { mapProduct } from "@/lib/mappers/product"
 
 import { ProductProvider } from "@/components/product/context/ProductContext"
 
@@ -29,11 +30,13 @@ interface Props {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params
 
-  const product = PRODUCTS.find((item) => item.slug === slug)
+  const medusaProduct = await getProduct(slug)
 
-  if (!product) {
+  if (!medusaProduct) {
     notFound()
   }
+
+  const product = mapProduct(medusaProduct)
 
   return (
     <ProductProvider product={product}>

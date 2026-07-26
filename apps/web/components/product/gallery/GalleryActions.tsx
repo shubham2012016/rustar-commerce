@@ -3,12 +3,14 @@
 import { Heart, Share2, Expand } from "lucide-react"
 
 interface GalleryActionsProps {
+  isWishlisted?: boolean
   onWishlist?: () => void
   onShare?: () => void
   onFullscreen?: () => void
 }
 
 export default function GalleryActions({
+  isWishlisted,
   onWishlist,
   onShare,
   onFullscreen,
@@ -24,7 +26,11 @@ export default function GalleryActions({
         className={buttonClass}
         onClick={onWishlist}
       >
-        <Heart className="h-5 w-5" />
+        <Heart
+          className={`h-5 w-5 transition-all duration-300 ${
+            isWishlisted ? "fill-red-500 text-red-500" : ""
+          }`}
+        />
       </button>
 
       <button

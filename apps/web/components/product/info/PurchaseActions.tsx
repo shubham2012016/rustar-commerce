@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Heart, Loader2, ShieldCheck, ShoppingCart, Zap } from "lucide-react"
 
 import { useProduct } from "@/components/product/context/ProductContext"
-import { useCartStore, useCheckoutStore } from "@/store"
+import { useCartStore, useCheckoutStore, useWishlistStore } from "@/store"
 
 export default function PurchaseActions() {
   const router = useRouter()
@@ -17,11 +17,20 @@ export default function PurchaseActions() {
 
   const addItem = useCartStore((state) => state.addItem)
 
+  const toggleWishlist = useWishlistStore((state) => state.toggleItem)
+
+  const wishlistItems = useWishlistStore((state) => state.items)
+
+  const isWishlisted = wishlistItems.some(
+    (item) => item.id === product.id && item.variantId === selectedVariant.id
+  )
+  console.log(wishlistItems)
+
   const setCheckoutItems = useCheckoutStore((state) => state.setItems)
 
   async function handleAddToCart() {
     setLoading(true)
-
+    console.log("PRODUCT PAGE QUANTITY:", quantity)
     addItem({
       id: product.id,
       slug: product.slug,
@@ -36,6 +45,26 @@ export default function PurchaseActions() {
     })
 
     setLoading(false)
+  }
+
+  function handleWishlist() {
+    const item = {
+      id: product.id,
+      slug: product.slug,
+      sku: selectedVariant.sku,
+      name: product.name,
+      image: product.images[0]?.url ?? "",
+      price: selectedVariant.price,
+      variantId: selectedVariant.id,
+      variantName: selectedVariant.value,
+      stock: selectedVariant.stock,
+    }
+
+    console.log("Before:", useWishlistStore.getState().items)
+
+    useWishlistStore.getState().toggleItem(item)
+
+    console.log("After:", useWishlistStore.getState().items)
   }
 
   function handleBuyNow() {
@@ -90,10 +119,19 @@ export default function PurchaseActions() {
 
         <button
           type="button"
-          aria-label="Add to wishlist"
-          className="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50"
+          onClick={handleWishlist}
+          aria-label="Wishlist"
+          className={`flex h-16 w-16 items-center justify-center rounded-2xl border transition-all duration-300 ${
+            isWishlisted
+              ? "border-red-500 bg-red-50"
+              : "border-slate-300 bg-white hover:border-red-500 hover:bg-red-50"
+          } `}
         >
-          <Heart className="h-6 w-6" />
+          <Heart
+            className={`h-6 w-6 transition-all duration-300 ${
+              isWishlisted ? "scale-110 fill-red-500 text-red-500" : ""
+            }`}
+          />
         </button>
       </div>
 

@@ -8,7 +8,7 @@ export default function StoreLayout({
   return (
     <>
       <main>{children}</main>
-
+      <Footer />
     </>
   )
 }

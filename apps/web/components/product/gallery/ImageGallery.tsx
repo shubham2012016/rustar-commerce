@@ -9,8 +9,18 @@ import ImageLightbox from "./ImageLightbox"
 import ImageThumbnail from "./ImageThumbnail"
 import ImageZoom from "./ImageZoom"
 
+import { useWishlistStore } from "@/store"
+
 export default function ImageGallery() {
-  const { product } = useProduct()
+  const { product, selectedVariant } = useProduct()
+
+  const toggleWishlist = useWishlistStore((state) => state.toggleItem)
+
+  const wishlistItems = useWishlistStore((state) => state.items)
+
+  const isWishlisted = wishlistItems.some(
+    (item) => item.id === product.id && item.variantId === selectedVariant.id
+  )
   const images = product.images
 
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -47,9 +57,20 @@ export default function ImageGallery() {
             <ImageZoom image={images[selectedIndex]} />
 
             <GalleryActions
+              isWishlisted={isWishlisted}
               onFullscreen={() => setLightboxOpen(true)}
               onWishlist={() => {
-                console.log("Wishlist")
+                toggleWishlist({
+                  id: product.id,
+                  slug: product.slug,
+                  sku: selectedVariant.sku,
+                  name: product.name,
+                  image: product.images[0]?.url ?? "",
+                  price: selectedVariant.price,
+                  variantId: selectedVariant.id,
+                  variantName: selectedVariant.value,
+                  stock: selectedVariant.stock,
+                })
               }}
               onShare={() => {
                 if (navigator.share) {

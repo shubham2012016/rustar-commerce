@@ -1,7 +1,13 @@
-export const navigation = [
+export interface NavigationItem {
+  label: string
+  href: string
+  megaMenu?: boolean
+}
+
+export const navigation: NavigationItem[] = [
   {
     label: "Shop",
-    href: "/shop  ",
+    href: "/shop",
     megaMenu: true,
   },
   {
@@ -16,10 +22,6 @@ export const navigation = [
   {
     label: "About",
     href: "/about",
-  },
-  {
-    label: "Blog",
-    href: "/blog",
   },
   {
     label: "Contact",

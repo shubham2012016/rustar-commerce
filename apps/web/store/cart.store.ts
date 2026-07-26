@@ -3,7 +3,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-import type { CartItem, CartState } from "@/types"
+import type { CartState } from "@/types"
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -13,7 +13,14 @@ export const useCartStore = create<CartState>()(
       addItem: (item) =>
         set((state) => {
           console.log("ADDING TO CART:", item)
-          console.log("STATE BEFORE", state.items)
+          console.log(
+            "STATE BEFORE",
+            state.items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              variantId: item.variantId,
+            }))
+          )
           console.log("ADDING", item)
           const existingItem = state.items.find(
             (cartItem) =>
