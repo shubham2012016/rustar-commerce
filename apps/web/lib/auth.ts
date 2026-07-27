@@ -12,53 +12,68 @@ export interface LoginInput {
   password: string
 }
 
-export async function registerCustomer(
-  data: RegisterInput
-) {
-  // Create authentication identity
+// export async function registerCustomer(data: RegisterInput) {
+//   // Step 1: Create auth identity
+//   await medusa.auth.register("customer", "emailpass", {
+//     email: data.email,
+//     password: data.password,
+//   })
+
+//   // Step 2: Create customer
+//   await medusa.store.customer.create({
+//     email: data.email,
+//     first_name: data.firstName,
+//     last_name: data.lastName,
+//   })
+
+//   // Step 3: Login
+//   await medusa.auth.login("customer", "emailpass", {
+//     email: data.email,
+//     password: data.password,
+//   })
+
+//   // Step 4: Retrieve customer
+//   const { customer } = await medusa.store.customer.retrieve()
+
+//   return customer
+// }
+
+export async function registerCustomer(data: RegisterInput) {
   await medusa.auth.register("customer", "emailpass", {
     email: data.email,
     password: data.password,
   })
 
-  // Create customer profile
   await medusa.store.customer.create({
     email: data.email,
     first_name: data.firstName,
     last_name: data.lastName,
   })
 
-  // Automatically login
   await medusa.auth.login("customer", "emailpass", {
     email: data.email,
     password: data.password,
   })
 
-  // Return logged in customer
-  const { customer } =
-    await medusa.store.customer.retrieve()
+  const { customer } = await medusa.store.customer.retrieve()
 
   return customer
 }
 
-export async function loginCustomer(
-  data: LoginInput
-) {
+export async function loginCustomer(data: LoginInput) {
   await medusa.auth.login("customer", "emailpass", {
     email: data.email,
     password: data.password,
   })
 
-  const { customer } =
-    await medusa.store.customer.retrieve()
+  const { customer } = await medusa.store.customer.retrieve()
 
   return customer
 }
+
 export async function getCustomer() {
   try {
-    const { customer } =
-      await medusa.store.customer.retrieve()
-
+    const { customer } = await medusa.store.customer.retrieve()
     return customer
   } catch {
     return null

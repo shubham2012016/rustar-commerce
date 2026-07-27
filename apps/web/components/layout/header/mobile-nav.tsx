@@ -2,23 +2,26 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ChevronDown,
+  ChevronRight,
   CircleUserRound,
   Heart,
+  LogIn,
+  LogOut,
   Menu,
-  Search,
   ShoppingBag,
+  UserPlus,
   X,
 } from "lucide-react"
-
 import { AnimatePresence, motion } from "framer-motion"
 
-import { navigation } from "./navigation"
-import { megaMenu } from "./mega-menu.data"
+import { useAuthStore } from "@/store/auth.store"
 
+import { megaMenu } from "./mega-menu.data"
 import Logo from "./logo"
+import { navigation } from "./navigation"
 
 function getMegaMenuType(label: string): keyof typeof megaMenu {
   return label === "Shop" ? "shop" : "categories"
@@ -26,22 +29,33 @@ function getMegaMenuType(label: string): keyof typeof megaMenu {
 
 export default function MobileNav() {
   const pathname = usePathname()
+  const router = useRouter()
 
   const [open, setOpen] = useState(false)
-
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  // -----------------------------------
-  // Close on route change
-  // -----------------------------------
+  const customer = useAuthStore((state) => state.customer)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const initialized = useAuthStore((state) => state.initialized)
+  const logout = useAuthStore((state) => state.logout)
+
+  const fullName =
+    `${customer?.first_name ?? ""} ${customer?.last_name ?? ""}`.trim()
+
+  async function handleLogout() {
+    setOpen(false)
+
+    try {
+      await logout()
+    } finally {
+      router.push("/")
+      router.refresh()
+    }
+  }
 
   useEffect(() => {
     setOpen(false)
   }, [pathname])
-
-  // -----------------------------------
-  // Lock body scroll
-  // -----------------------------------
 
   useEffect(() => {
     if (!open) {
@@ -55,10 +69,6 @@ export default function MobileNav() {
       document.body.style.overflow = ""
     }
   }, [open])
-
-  // -----------------------------------
-  // ESC closes drawer
-  // -----------------------------------
 
   useEffect(() => {
     if (!open) return
@@ -80,10 +90,9 @@ export default function MobileNav() {
 
   return (
     <>
-      {/* Mobile Toggle */}
-
       <button
-        aria-label="Open Menu"
+        type="button"
+        aria-label="Open menu"
         onClick={() => setOpen(true)}
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white transition hover:border-orange-500 lg:hidden"
       >
@@ -93,8 +102,6 @@ export default function MobileNav() {
       <AnimatePresence>
         {open && (
           <>
-            {/* Overlay */}
-
             <motion.div
               className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm"
               initial={{ opacity: 0 }}
@@ -103,23 +110,19 @@ export default function MobileNav() {
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer */}
-
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{
-                duration: 0.28,
-              }}
+              transition={{ duration: 0.28 }}
               className="fixed top-0 left-0 z-[100] flex h-screen w-[88%] max-w-sm flex-col bg-white shadow-2xl"
             >
-              {/* Header */}
-
               <div className="flex items-center justify-between border-b p-5">
                 <Logo />
 
                 <button
+                  type="button"
+                  aria-label="Close menu"
                   onClick={() => setOpen(false)}
                   className="rounded-lg p-2 hover:bg-slate-100"
                 >
@@ -127,35 +130,49 @@ export default function MobileNav() {
                 </button>
               </div>
 
-              {/* Navigation */}
-
-              {/* Welcome Section */}
-
-              {/* Account Banner */}
-
               <div className="border-b bg-slate-50">
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between px-6 py-5 transition hover:bg-slate-100"
-                >
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">
-                      Welcome 👋
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Login to manage orders and wishlist.
-                    </p>
+                {!initialized ? (
+                  <div className="px-6 py-5">
+                    <p className="text-sm text-slate-500">Loading...</p>
                   </div>
+                ) : isAuthenticated ? (
+                  <div className="px-6 py-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-600">
+                        {(customer?.first_name?.[0] ?? "U").toUpperCase()}
+                      </div>
 
-                  <div className="rounded-full bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-600">
-                    Login →
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900">
+                          {fullName || "Customer"}
+                        </p>
+
+                        <p className="truncate text-sm text-slate-500">
+                          {customer?.email}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center justify-between gap-4 px-6 py-5 transition hover:bg-slate-100"
+                  >
+                    <div>
+                      <p className="font-semibold">Welcome</p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Login to manage orders and wishlist.
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 rounded-full bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-600">
+                      Login
+                    </div>
+                  </Link>
+                )}
               </div>
-
-              {/* Navigation */}
 
               <div className="flex-1 overflow-y-auto">
                 <nav className="py-3">
@@ -171,7 +188,7 @@ export default function MobileNav() {
                             active
                               ? "bg-orange-50 font-semibold text-orange-600"
                               : "hover:bg-slate-50"
-                          } `}
+                          }`}
                         >
                           {item.label}
                         </Link>
@@ -186,6 +203,7 @@ export default function MobileNav() {
                         className="border-b border-slate-100"
                       >
                         <button
+                          type="button"
                           onClick={() => toggleSection(item.label)}
                           className="flex w-full items-center justify-between px-6 py-4 font-medium"
                         >
@@ -203,21 +221,10 @@ export default function MobileNav() {
                         <AnimatePresence>
                           {expanded === item.label && (
                             <motion.div
-                              initial={{
-                                height: 0,
-                                opacity: 0,
-                              }}
-                              animate={{
-                                height: "auto",
-                                opacity: 1,
-                              }}
-                              exit={{
-                                height: 0,
-                                opacity: 0,
-                              }}
-                              transition={{
-                                duration: 0.22,
-                              }}
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22 }}
                               className="overflow-hidden"
                             >
                               <div className="py-2">
@@ -258,8 +265,6 @@ export default function MobileNav() {
                 </nav>
               </div>
 
-              {/* Bottom Actions */}
-
               <div className="border-t">
                 <div className="px-6 py-5">
                   <p className="mb-4 text-xs font-semibold tracking-wider text-slate-400 uppercase">
@@ -276,32 +281,98 @@ export default function MobileNav() {
                         <Heart className="h-5 w-5" />
                         Wishlist
                       </div>
-                      →
+
+                      <ChevronRight
+                        className="h-4 w-4 text-slate-400"
+                        aria-hidden="true"
+                      />
                     </Link>
 
-                    <Link
-                      href="/account"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CircleUserRound className="h-5 w-5" />
-                        My Account
-                      </div>
-                      →
-                    </Link>
+                    {isAuthenticated ? (
+                      <>
+                        <Link
+                          href="/account"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <CircleUserRound className="h-5 w-5" />
+                            My Account
+                          </div>
 
-                    <Link
-                      href="/orders"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <ShoppingBag className="h-5 w-5" />
-                        My Orders
-                      </div>
-                      →
-                    </Link>
+                          <ChevronRight
+                            className="h-4 w-4 text-slate-400"
+                            aria-hidden="true"
+                          />
+                        </Link>
+
+                        <Link
+                          href="/orders"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <ShoppingBag className="h-5 w-5" />
+                            My Orders
+                          </div>
+
+                          <ChevronRight
+                            className="h-4 w-4 text-slate-400"
+                            aria-hidden="true"
+                          />
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="flex w-full items-center justify-between rounded-xl px-4 py-4 text-red-600 transition hover:bg-red-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <LogOut className="h-5 w-5" />
+                            Logout
+                          </div>
+
+                          <ChevronRight
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/login"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <LogIn className="h-5 w-5" />
+                            Login
+                          </div>
+
+                          <ChevronRight
+                            className="h-4 w-4 text-slate-400"
+                            aria-hidden="true"
+                          />
+                        </Link>
+
+                        <Link
+                          href="/register"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-between rounded-xl px-4 py-4 transition hover:bg-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <UserPlus className="h-5 w-5" />
+                            Create Account
+                          </div>
+
+                          <ChevronRight
+                            className="h-4 w-4 text-slate-400"
+                            aria-hidden="true"
+                          />
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -317,7 +388,7 @@ export default function MobileNav() {
 
                 <div className="border-t px-5 py-4">
                   <p className="text-center text-xs text-slate-500">
-                    © {new Date().getFullYear()} Rustar Chem.
+                    (c) {new Date().getFullYear()} Rustar Chem.
                     <br />
                     Premium Automotive Care Products.
                   </p>
