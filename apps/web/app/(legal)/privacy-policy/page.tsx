@@ -97,9 +97,10 @@ export default function PrivacyPolicyPage() {
         <div className="space-y-8">
           <LegalSection id="overview" title="Overview">
             <p>
-              Rustar Chem ("we", "our", "us") respects your privacy and is
-              committed to protecting the personal information you share with
-              us.
+              Rustar Chem (referred to as <strong>we</strong>,{" "}
+              <strong>our</strong>, and
+              <strong>us</strong>) respects your privacy and is committed to
+              protecting the personal information you share with us.
             </p>
 
             <p>
