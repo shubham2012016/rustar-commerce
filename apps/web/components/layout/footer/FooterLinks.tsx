@@ -104,8 +104,8 @@ export default function FooterLinks() {
 
                 <div>
                   <p className="font-semibold text-white">Phone</p>
-
-                  <p className="mt-1 text-sm text-slate-300">{BRAND.phone}</p>
+                  <p className="mt-1 text-sm text-slate-300">+91 7838302280</p>
+                  {/* <p className="mt-1 text-sm text-slate-300">{BRAND.phone}</p> */}
                 </div>
               </div>
             </div>
