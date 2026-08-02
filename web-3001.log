@@ -1,0 +1,59 @@
+   ▲ Next.js 15.5.20 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://172.26.112.1:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+Creating turbopack project { dir: 'D:\\Projects\\Rustar-Commerce\\apps\\web', testMode: true }
+ ✓ Ready in 2.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 8s
+Initiating Medusa client with default headers:
+ {
+  "accept": "application/json",
+  "content-type": "application/json",
+  "x-publishable-api-key": "pk_46f085ad404c3bab6068079f33d97aec8a843a261a6a8afd21803baacc4ea4f4",
+  "authorization": "<REDACTED>"
+}
+
+Performing request to:
+ URL: http://localhost:9000/store/products?limit=6
+ Headers: {
+  "accept": "application/json",
+  "content-type": "application/json",
+  "x-medusa-locale": "",
+  "x-publishable-api-key": "pk_46f085ad404c3bab6068079f33d97aec8a843a261a6a8afd21803baacc4ea4f4",
+  "authorization": "<REDACTED>"
+}
+
+Initiating Medusa client with default headers:
+ {
+  "accept": "application/json",
+  "content-type": "application/json",
+  "x-publishable-api-key": "pk_46f085ad404c3bab6068079f33d97aec8a843a261a6a8afd21803baacc4ea4f4",
+  "authorization": "<REDACTED>"
+}
+
+ GET / 200 in 11308ms
+ ○ Compiling /products/[slug] ...
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 1998ms
+ ✓ Compiled /products/[slug] in 3s
+Initiating Medusa client with default headers:
+ {
+  "accept": "application/json",
+  "content-type": "application/json",
+  "x-publishable-api-key": "pk_46f085ad404c3bab6068079f33d97aec8a843a261a6a8afd21803baacc4ea4f4",
+  "authorization": "<REDACTED>"
+}
+
+Performing request to:
+ URL: http://localhost:9000/store/products?handle=car_bike_shampoo.webp&limit=1
+ Headers: {
+  "accept": "application/json",
+  "content-type": "application/json",
+  "x-medusa-locale": "",
+  "x-publishable-api-key": "pk_46f085ad404c3bab6068079f33d97aec8a843a261a6a8afd21803baacc4ea4f4",
+  "authorization": "<REDACTED>"
+}
+
+ GET /products/car_bike_shampoo.webp 200 in 5739ms
