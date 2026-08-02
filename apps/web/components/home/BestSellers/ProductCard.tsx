@@ -17,7 +17,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link
-      href={`/shop/${product.slug}`}
+      href={`/products/${product.slug}`}
       className="group relative block overflow-hidden rounded-[30px] border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-blue-50/40 transition-all duration-500 hover:-translate-y-2 hover:border-blue-200 hover:shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
     >
       {/* Background Glow */}
