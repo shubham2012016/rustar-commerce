@@ -18,16 +18,32 @@ export interface CartItem {
   variantName: string
 
   stock: number
+
+  lineItemId?: string
 }
 
 export interface CartState {
+  cartId: string | null
+
+  loading: boolean
+
+  error: string | null
+
   items: CartItem[]
 
-  addItem: (item: CartItem) => void
+  createCartIfNeeded: () => Promise<void>
 
-  removeItem: (id: string, variantId: string) => void
+  addItem: (item: CartItem) => Promise<void>
 
-  updateQuantity: (id: string, variantId: string, quantity: number) => void
+  removeItem: (id: string, variantId: string) => Promise<void>
+
+  updateQuantity: (
+    id: string,
+    variantId: string,
+    quantity: number
+  ) => Promise<void>
+
+  retrieveCart: () => Promise<void>
 
   clearCart: () => void
 

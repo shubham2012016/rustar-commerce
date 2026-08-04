@@ -1,11 +1,25 @@
 "use client"
 
-import { useCartStore } from "@/store"
+import { useEffect } from "react"
+
+import { useCartStore } from "@/store/cart.store"
 
 import CartItem from "./CartItem"
 
 export default function CartItems() {
+  const cartId = useCartStore((state) => state.cartId)
   const items = useCartStore((state) => state.items)
+  const retrieveCart = useCartStore((state) => state.retrieveCart)
+
+  useEffect(() => {
+    if (!cartId || items.length > 0) {
+      return
+    }
+
+    retrieveCart().catch(() => {
+      // Ignore retrieval failure here; cart store will handle errors.
+    })
+  }, [cartId, items.length, retrieveCart])
 
   if (items.length === 0) {
     return (

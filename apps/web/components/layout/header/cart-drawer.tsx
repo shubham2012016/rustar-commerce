@@ -15,6 +15,18 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
+  const cartId = useCartStore((state) => state.cartId)
+  const items = useCartStore((state) => state.items)
+  const retrieveCart = useCartStore((state) => state.retrieveCart)
+
+  useEffect(() => {
+    if (!open || !cartId || items.length > 0) return
+
+    retrieveCart().catch(() => {
+      // Silent retrieval failure; UI will remain in sync with store state.
+    })
+  }, [open, cartId, items.length, retrieveCart])
+
   useEffect(() => {
     if (!open) return
 
@@ -33,13 +45,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
       window.removeEventListener("keydown", handleKeyDown)
     }
   }, [open, onClose])
-
-  // -----------------------------
-  // Temporary placeholder data
-  // Replace with Zustand later
-  // -----------------------------
-
-  const items = useCartStore((state) => state.items)
 
   const subtotal = items.reduce(
     (total, item) => total + item.price * item.quantity,
