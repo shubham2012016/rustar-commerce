@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -28,6 +28,7 @@ export default function LoginForm() {
 
   const login = useAuthStore((state) => state.login)
   const loading = useAuthStore((state) => state.loading)
+  const searchParams = useSearchParams()
 
   async function onSubmit(data: LoginFormValues) {
     try {
@@ -36,7 +37,8 @@ export default function LoginForm() {
         password: data.password,
       })
 
-      router.replace("/")
+      const redirect = searchParams.get("redirect") ?? "/"
+      router.replace(redirect)
       router.refresh()
     } catch (err) {
       console.error(err)

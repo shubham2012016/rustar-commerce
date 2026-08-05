@@ -19,12 +19,18 @@ export interface VerifyPaymentPayload {
 const API_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
 
-export async function createRazorpayOrder(amount: number, currency = "INR") {
+export async function createRazorpayOrder(cartId: string) {
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
   const { data } = await axios.post<RazorpayOrderResponse>(
     `${API_URL}/store/razorpay/create-order`,
     {
-      amount,
-      currency,
+      cartId,
+    },
+    {
+      headers: {
+        "x-publishable-api-key": publishableKey,
+      },
     }
   )
 
@@ -32,7 +38,17 @@ export async function createRazorpayOrder(amount: number, currency = "INR") {
 }
 
 export async function verifyRazorpayPayment(payload: VerifyPaymentPayload) {
-  const { data } = await axios.post(`${API_URL}/store/razorpay/verify`, payload)
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+  const { data } = await axios.post(
+    `${API_URL}/store/razorpay/verify`,
+    payload,
+    {
+      headers: {
+        "x-publishable-api-key": publishableKey,
+      },
+    }
+  )
 
   return data
 }

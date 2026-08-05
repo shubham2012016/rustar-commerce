@@ -1,3 +1,4 @@
 export * from "./cart.store"
 export * from "./checkout.store"
 export * from "./wishlist.store"
+export * from "./auth.store"

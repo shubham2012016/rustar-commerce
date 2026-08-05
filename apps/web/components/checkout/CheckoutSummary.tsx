@@ -2,7 +2,10 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
+import { createRazorpayOrder, loadRazorpayScript, verifyRazorpayPayment } from "@/services/payment"
+import { useCartStore, useCheckoutStore } from "@/store"
 import type { CartItem } from "@/types"
 
 interface Props {
@@ -10,12 +13,111 @@ interface Props {
 }
 
 export default function CheckoutSummary({ items }: Props) {
+  const router = useRouter()
+  const paymentMethod = useCheckoutStore((state) => state.paymentMethod)
+  const loading = useCheckoutStore((state) => state.loading)
+  const setLoading = useCheckoutStore((state) => state.setLoading)
+  const setRazorpayData = useCheckoutStore((state) => state.setRazorpayData)
+
   const subtotal = items.reduce(
     (total, item) => total + item.price * item.quantity,
     0
   )
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
+
+  const isRazorpay = paymentMethod === "razorpay"
+  const buttonLabel = isRazorpay ? "Pay Securely" : "Cash on Delivery not available"
+
+  async function handlePayment() {
+    if (!isRazorpay || items.length === 0) {
+      return
+    }
+
+    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+
+    if (!razorpayKey) {
+      alert("Razorpay public key is not configured.")
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const loaded = await loadRazorpayScript()
+
+      if (!loaded) {
+        throw new Error("Unable to load Razorpay checkout script.")
+      }
+
+      const cartId = useCartStore.getState().cartId
+
+      if (!cartId) {
+        throw new Error("No cart found for checkout.")
+      }
+
+      const orderResponse = await createRazorpayOrder(cartId)
+
+      if (!orderResponse.success) {
+        throw new Error("Failed to create Razorpay order.")
+      }
+
+      const Razorpay = (window as any).Razorpay
+
+      if (!Razorpay) {
+        throw new Error("Razorpay SDK is not available.")
+      }
+
+      const options = {
+        key: razorpayKey,
+        amount: orderResponse.order.amount,
+        currency: orderResponse.order.currency,
+        name: "Rustar Commerce",
+        description: "Complete your payment securely",
+        order_id: orderResponse.order.id,
+        handler: async (response: {
+          razorpay_payment_id: string
+          razorpay_order_id: string
+          razorpay_signature: string
+        }) => {
+          try {
+            const verification = await verifyRazorpayPayment(response)
+
+            if (!verification?.success) {
+              throw new Error(
+                verification?.message ?? "Payment verification failed."
+              )
+            }
+
+            setRazorpayData(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            )
+
+            setLoading(false)
+            router.push("/checkout/success")
+          } catch (error) {
+            setLoading(false)
+            console.error(error)
+            alert((error as Error).message ?? "Payment verification failed.")
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false)
+          },
+        },
+      }
+
+      const checkout = new Razorpay(options)
+      checkout.open()
+    } catch (error) {
+      setLoading(false)
+      console.error(error)
+      alert((error as Error).message ?? "Unable to start Razorpay payment.")
+    }
+  }
 
   return (
     <aside className="sticky top-24 self-start overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -83,8 +185,13 @@ export default function CheckoutSummary({ items }: Props) {
           <p>✓ Customer Support</p>
         </div>
 
-        <button className="mt-8 w-full rounded-2xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700">
-          Pay Securely
+        <button
+          type="button"
+          disabled={!isRazorpay || loading || items.length === 0}
+          onClick={handlePayment}
+          className="mt-8 w-full rounded-2xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Processing..." : buttonLabel}
         </button>
 
         <Link

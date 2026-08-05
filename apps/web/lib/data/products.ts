@@ -139,10 +139,26 @@ export async function getProduct(
       limit: 1,
     })
 
+    console.log("====================================")
+    console.log("HANDLE:", handle)
+    console.log("MEDUSA RESPONSE")
+    console.dir(response, { depth: null })
+
+    console.log("PRODUCT")
+    console.dir(response.products?.[0], { depth: null })
+
+    console.log("VARIANT")
+    console.dir(response.products?.[0]?.variants?.[0], { depth: null })
+
+    console.log("CALCULATED PRICE")
+    console.dir(response.products?.[0]?.variants?.[0]?.calculated_price, {
+      depth: null,
+    })
+
+    console.log("====================================")
+
     return (response.products[0] as HttpTypes.StoreProduct) ?? null
   } catch {
-    return (
-      fallbackProducts.find((product) => product.handle === handle) ?? null
-    )
+    return fallbackProducts.find((product) => product.handle === handle) ?? null
   }
 }

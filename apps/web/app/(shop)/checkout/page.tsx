@@ -1,5 +1,8 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+
 import {
   CheckoutAddress,
   CheckoutHeader,
@@ -8,9 +11,19 @@ import {
   CheckoutSummary,
 } from "@/components/checkout"
 
-import { useCartStore, useCheckoutStore } from "@/store"
+import { useAuthStore, useCartStore, useCheckoutStore } from "@/store"
 
 export default function CheckoutPage() {
+  const router = useRouter()
+  const initialized = useAuthStore((state) => state.initialized)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  useEffect(() => {
+    if (initialized && !isAuthenticated) {
+      router.replace("/login?redirect=/checkout")
+    }
+  }, [initialized, isAuthenticated, router])
+
   const cartItems = useCartStore((state) => state.items)
 
   const buyNowItems = useCheckoutStore((state) => state.items)
