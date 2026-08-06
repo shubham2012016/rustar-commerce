@@ -67,21 +67,25 @@ export default function PurchaseActions() {
     console.log("After:", useWishlistStore.getState().items)
   }
 
-  function handleBuyNow() {
-    setCheckoutItems([
-      {
-        id: product.id,
-        slug: product.slug,
-        sku: selectedVariant.sku,
-        name: product.name,
-        image: product.images[0]?.url ?? "",
-        price: selectedVariant.price,
-        quantity,
-        variantId: selectedVariant.id,
-        variantName: selectedVariant.value,
-        stock: selectedVariant.stock,
-      },
-    ])
+  async function handleBuyNow() {
+    // Add the item to the canonical cart first so the checkout state reflects
+    // the server-side cart (single source of truth).
+    await addItem({
+      id: product.id,
+      slug: product.slug,
+      sku: selectedVariant.sku,
+      name: product.name,
+      image: product.images[0]?.url ?? "",
+      price: selectedVariant.price,
+      quantity,
+      variantId: selectedVariant.id,
+      variantName: selectedVariant.value,
+      stock: selectedVariant.stock,
+    })
+
+    // Use the cart store's items as the canonical checkout items.
+    const cartItems = useCartStore.getState().items
+    setCheckoutItems(cartItems)
 
     router.push("/checkout")
   }

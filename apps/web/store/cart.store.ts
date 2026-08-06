@@ -44,14 +44,20 @@ function mapCartItems(
           string | undefined) ?? "",
       sku: (lineItem.sku as string) ?? "",
       name: (lineItem.title as string) ?? "",
-      image: (lineItem.thumbnail as string) ?? "",
-      price: (lineItem.unit_price as number) ?? 0,
-      quantity: (lineItem.quantity as number) ?? 0,
-      variantId: (lineItem.variant_id as string) ?? "",
-      variantName: (lineItem.title as string) ?? "",
-      stock:
-        inventoryQuantity == null ? Number.MAX_SAFE_INTEGER : inventoryQuantity,
-      lineItemId: (lineItem.id as string) ?? "",
+    image:
+      (lineItem.thumbnail as string) ??
+      ((lineItem.product as any)?.thumbnail as string) ??
+      ((lineItem.product as any)?.images?.[0]?.url as string) ??
+      ((lineItem.variant as any)?.product?.thumbnail as string) ??
+      ((lineItem.variant as any)?.product?.images?.[0]?.url as string) ??
+      "",
+    price: (lineItem.unit_price as number) ?? 0,
+    quantity: (lineItem.quantity as number) ?? 0,
+    variantId: (lineItem.variant_id as string) ?? "",
+    variantName: (lineItem.title as string) ?? "",
+    stock:
+      inventoryQuantity == null ? Number.MAX_SAFE_INTEGER : inventoryQuantity,
+    lineItemId: (lineItem.id as string) ?? "",
     }
   })
 }
@@ -144,7 +150,39 @@ export const useCartStore = create<CartState>()(
             item.variantId,
             item.quantity
           )
-          set({ cartId: cart.id, items: mapCartItems(cart), loading: false })
+
+          // Map backend cart items to our UI model
+          const mappedItems = mapCartItems(cart)
+
+          // Preserve any local images for items when backend doesn't provide thumbnails.
+          // Match by variantId then product id then line item id. Also prefer the
+          // image that was passed to addItem (if present) to ensure the image
+          // chosen on the product page is used in the cart when the backend
+          // response omits thumbnails.
+          const previousItems = get().items
+          for (const mi of mappedItems) {
+            if (!mi.image || mi.image === "") {
+              // Prefer the image from the item we just added if it matches.
+              if (item && (item as any).image) {
+                const addedItem = item as unknown as CartItem
+                if (addedItem.variantId === mi.variantId || addedItem.id === mi.id) {
+                  mi.image = addedItem.image
+                  continue
+                }
+              }
+
+              if (previousItems && previousItems.length > 0) {
+                const match = previousItems.find(
+                  (pi) => pi.variantId === mi.variantId || pi.id === mi.id || pi.lineItemId === mi.lineItemId
+                )
+                if (match && match.image) {
+                  mi.image = match.image
+                }
+              }
+            }
+          }
+
+          set({ cartId: cart.id, items: mappedItems, loading: false })
           console.log("[cart] addItem succeeded", { cartId: cart.id })
         } catch (error) {
           set({

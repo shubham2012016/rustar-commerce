@@ -1,5 +1,6 @@
 import type { HttpTypes } from "@medusajs/types"
 import { medusa } from "@/lib/medusa"
+import { resolveRegionId } from "@/services/region"
 
 const fallbackProducts = [
   {
@@ -120,12 +121,16 @@ export async function getProducts(
   limit = 20
 ): Promise<HttpTypes.StoreProduct[]> {
   try {
+    const regionId = await resolveRegionId()
+
     const response = await medusa.store.product.list({
       limit,
+      region_id: regionId,
     })
 
     return response.products as HttpTypes.StoreProduct[]
-  } catch {
+  } catch (error) {
+    console.error("getProducts failed:", error)
     return fallbackProducts.slice(0, limit)
   }
 }
@@ -134,13 +139,18 @@ export async function getProduct(
   handle: string
 ): Promise<HttpTypes.StoreProduct | null> {
   try {
+    const regionId = await resolveRegionId()
+
     const response = await medusa.store.product.list({
       handle,
       limit: 1,
+      region_id: regionId,
     })
 
     console.log("====================================")
+    console.log("REGION:", regionId)
     console.log("HANDLE:", handle)
+
     console.log("MEDUSA RESPONSE")
     console.dir(response, { depth: null })
 
@@ -157,8 +167,10 @@ export async function getProduct(
 
     console.log("====================================")
 
-    return (response.products[0] as HttpTypes.StoreProduct) ?? null
-  } catch {
+    return (response.products?.[0] as HttpTypes.StoreProduct) ?? null
+  } catch (error) {
+    console.error("getProduct failed:", error)
+
     return fallbackProducts.find((product) => product.handle === handle) ?? null
   }
 }
