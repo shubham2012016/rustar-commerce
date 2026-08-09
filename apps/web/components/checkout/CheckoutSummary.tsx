@@ -73,7 +73,7 @@ export default function CheckoutSummary({ items }: Props) {
       if (!Razorpay) {
         throw new Error("Razorpay SDK is not available.")
       }
-      console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID =", razorpayKey)
+      // console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID =", razorpayKey)
       console.log("ORDER RESPONSE =", orderResponse)
       const options = {
         key: razorpayKey,
