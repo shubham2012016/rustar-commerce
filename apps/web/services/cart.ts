@@ -121,7 +121,10 @@ export async function updateCheckoutAddress(
 /**
  * Add shipping option to the cart.
  */
-export async function selectShippingOption(cartId: string, optionId: string) {
+export async function selectShippingOption(
+  cartId: string,
+  optionId: string
+) {
   const { cart } = await medusa.store.cart.addShippingMethod(cartId, {
     option_id: optionId,
   })
