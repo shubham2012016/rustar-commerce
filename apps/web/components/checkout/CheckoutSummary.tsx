@@ -9,6 +9,9 @@ import {
   loadRazorpayScript,
   verifyRazorpayPayment,
 } from "@/services/payment"
+
+import { prepareCartForCheckout } from "@/services/cart"
+
 import { useCartStore, useCheckoutStore } from "@/store"
 import type { CartItem } from "@/types"
 
@@ -18,9 +21,15 @@ interface Props {
 
 export default function CheckoutSummary({ items }: Props) {
   const router = useRouter()
+
   const paymentMethod = useCheckoutStore((state) => state.paymentMethod)
+
+  const address = useCheckoutStore((state) => state.address)
+
   const loading = useCheckoutStore((state) => state.loading)
+
   const setLoading = useCheckoutStore((state) => state.setLoading)
+
   const setRazorpayData = useCheckoutStore((state) => state.setRazorpayData)
 
   const subtotal = items.reduce(
@@ -31,6 +40,7 @@ export default function CheckoutSummary({ items }: Props) {
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
   const isRazorpay = paymentMethod === "razorpay"
+
   const buttonLabel = isRazorpay
     ? "Pay Securely"
     : "Cash on Delivery not available"
@@ -47,25 +57,59 @@ export default function CheckoutSummary({ items }: Props) {
       return
     }
 
+    const cartId = useCartStore.getState().cartId
+
+    if (!cartId) {
+      alert("No cart found for checkout.")
+      return
+    }
+
+    if (!address) {
+      alert("Please enter your shipping address.")
+      return
+    }
+
+    if (
+      !address.firstName ||
+      !address.lastName ||
+      !address.email ||
+      !address.phone ||
+      !address.address1 ||
+      !address.city ||
+      !address.state ||
+      !address.postalCode
+    ) {
+      alert("Please complete all shipping address fields.")
+      return
+    }
+
     setLoading(true)
 
     try {
+      await prepareCartForCheckout(cartId, {
+        firstName: address.firstName,
+        lastName: address.lastName,
+        email: address.email,
+        phone: address.phone,
+        address1: address.address1,
+        city: address.city,
+        state: address.state,
+        country: address.country || "in",
+        postalCode: address.postalCode,
+      })
+
       const loaded = await loadRazorpayScript()
 
       if (!loaded) {
         throw new Error("Unable to load Razorpay checkout script.")
       }
 
-      const cartId = useCartStore.getState().cartId
-
-      if (!cartId) {
-        throw new Error("No cart found for checkout.")
-      }
-
       const orderResponse = await createRazorpayOrder(cartId)
 
-      if (!orderResponse.success) {
-        throw new Error("Failed to create Razorpay order.")
+      if (!orderResponse?.success || !orderResponse?.order?.id) {
+        throw new Error(
+          orderResponse?.message || "Failed to create Razorpay order."
+        )
       }
 
       const Razorpay = (window as any).Razorpay
@@ -73,46 +117,52 @@ export default function CheckoutSummary({ items }: Props) {
       if (!Razorpay) {
         throw new Error("Razorpay SDK is not available.")
       }
-      // console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID =", razorpayKey)
-      console.log("ORDER RESPONSE =", orderResponse)
+
       const options = {
         key: razorpayKey,
+
         order_id: orderResponse.order.id,
+
         amount: Number(orderResponse.order.amount),
+
         currency: orderResponse.order.currency,
-        name: "Rustar Commerce",
-        description: "Complete your payment securely",
+
+        name: "Rustar Chem",
+
+        description: "Payment for Rustar Chem order",
 
         prefill: {
-          name: "",
-          email: "",
-          contact: "",
+          name: `${address.firstName} ${address.lastName}`,
+          email: address.email,
+          contact: address.phone,
         },
 
         theme: {
           color: "#2563eb",
         },
+
         handler: async (response: {
           razorpay_payment_id: string
           razorpay_order_id: string
           razorpay_signature: string
         }) => {
           try {
-            const cartId = useCartStore.getState().cartId
-
-            if (!cartId) {
-              throw new Error("Cart ID missing.")
-            }
+            setLoading(true)
 
             const verification = await verifyRazorpayPayment({
               cartId,
+
               razorpay_order_id: response.razorpay_order_id,
+
               razorpay_payment_id: response.razorpay_payment_id,
+
               razorpay_signature: response.razorpay_signature,
             })
 
-            if (!verification.success) {
-              throw new Error(verification.message)
+            if (!verification?.success) {
+              throw new Error(
+                verification?.message || "Payment verification failed."
+              )
             }
 
             setRazorpayData(
@@ -122,52 +172,54 @@ export default function CheckoutSummary({ items }: Props) {
             )
 
             setLoading(false)
+
             router.push("/checkout/success")
           } catch (error) {
             setLoading(false)
-            console.error(error)
-            alert((error as Error).message)
+
+            console.error("[checkout] Payment verification failed:", error)
+
+            alert(
+              error instanceof Error
+                ? error.message
+                : "Payment verification failed."
+            )
           }
         },
+
         modal: {
           ondismiss() {
-            console.log("Checkout dismissed")
             setLoading(false)
           },
         },
       }
-      console.log(
-        JSON.stringify(
-          {
-            key: options.key,
-            amount: options.amount,
-            currency: options.currency,
-            order_id: options.order_id,
-            name: options.name,
-            description: options.description,
-          },
-          null,
-          2
-        )
-      )
-      console.log({
-        key: options.key,
-        order_id: options.order_id,
-        amount: options.amount,
-        currency: options.currency,
-      })
-      console.log("======================================")
+
       const checkout = new Razorpay(options)
+
+      checkout.on("payment.failed", (response: any) => {
+        console.error("[razorpay] Payment failed:", response)
+
+        setLoading(false)
+
+        alert(response?.error?.description || "Razorpay payment failed.")
+      })
+
       checkout.open()
     } catch (error) {
       setLoading(false)
-      console.error(error)
-      alert((error as Error).message ?? "Unable to start Razorpay payment.")
+
+      console.error("[checkout] Payment initialization failed:", error)
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to start Razorpay payment."
+      )
     }
   }
 
   return (
-    <aside className="sticky top-24 self-start overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <aside className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 p-8">
         <h2 className="text-2xl font-bold text-slate-900">Order Summary</h2>
 

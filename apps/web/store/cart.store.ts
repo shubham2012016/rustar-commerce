@@ -44,20 +44,23 @@ function mapCartItems(
           string | undefined) ?? "",
       sku: (lineItem.sku as string) ?? "",
       name: (lineItem.title as string) ?? "",
-    image:
-      (lineItem.thumbnail as string) ??
-      ((lineItem.product as any)?.thumbnail as string) ??
-      ((lineItem.product as any)?.images?.[0]?.url as string) ??
-      ((lineItem.variant as any)?.product?.thumbnail as string) ??
-      ((lineItem.variant as any)?.product?.images?.[0]?.url as string) ??
-      "",
-    price: (lineItem.unit_price as number) ?? 0,
-    quantity: (lineItem.quantity as number) ?? 0,
-    variantId: (lineItem.variant_id as string) ?? "",
-    variantName: (lineItem.title as string) ?? "",
-    stock:
-      inventoryQuantity == null ? Number.MAX_SAFE_INTEGER : inventoryQuantity,
-    lineItemId: (lineItem.id as string) ?? "",
+      image:
+        (lineItem.thumbnail as string) ??
+        ((lineItem.product as any)?.thumbnail as string) ??
+        ((lineItem.product as any)?.images?.[0]?.url as string) ??
+        ((lineItem.variant as any)?.product?.thumbnail as string) ??
+        ((lineItem.variant as any)?.product?.images?.[0]?.url as string) ??
+        "",
+      price:
+        typeof lineItem.unit_price === "number"
+          ? lineItem.unit_price / 100
+          : Number(lineItem.unit_price ?? 0) / 100,
+      quantity: (lineItem.quantity as number) ?? 0,
+      variantId: (lineItem.variant_id as string) ?? "",
+      variantName: (lineItem.title as string) ?? "",
+      stock:
+        inventoryQuantity == null ? Number.MAX_SAFE_INTEGER : inventoryQuantity,
+      lineItemId: (lineItem.id as string) ?? "",
     }
   })
 }
@@ -165,7 +168,10 @@ export const useCartStore = create<CartState>()(
               // Prefer the image from the item we just added if it matches.
               if (item && (item as any).image) {
                 const addedItem = item as unknown as CartItem
-                if (addedItem.variantId === mi.variantId || addedItem.id === mi.id) {
+                if (
+                  addedItem.variantId === mi.variantId ||
+                  addedItem.id === mi.id
+                ) {
                   mi.image = addedItem.image
                   continue
                 }
@@ -173,7 +179,10 @@ export const useCartStore = create<CartState>()(
 
               if (previousItems && previousItems.length > 0) {
                 const match = previousItems.find(
-                  (pi) => pi.variantId === mi.variantId || pi.id === mi.id || pi.lineItemId === mi.lineItemId
+                  (pi) =>
+                    pi.variantId === mi.variantId ||
+                    pi.id === mi.id ||
+                    pi.lineItemId === mi.lineItemId
                 )
                 if (match && match.image) {
                   mi.image = match.image

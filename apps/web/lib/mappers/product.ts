@@ -1,12 +1,17 @@
 import type { HttpTypes } from "@medusajs/types"
+
 import type { Product } from "@/types"
+
+function fromMedusaAmount(amount: number | null | undefined) {
+  return Number(amount ?? 0) / 100
+}
 
 export function mapProduct(product: HttpTypes.StoreProduct): Product {
   const variant = product.variants?.[0]
 
-  const price = variant?.calculated_price?.calculated_amount ?? 0
+  const price = fromMedusaAmount(variant?.calculated_price?.calculated_amount)
 
-  const compareAt = variant?.calculated_price?.original_amount ?? price
+  const compareAt = fromMedusaAmount(variant?.calculated_price?.original_amount)
 
   return {
     id: product.id,
@@ -51,7 +56,7 @@ export function mapProduct(product: HttpTypes.StoreProduct): Product {
 
         price,
 
-        compareAtPrice: compareAt,
+        compareAtPrice: compareAt || price,
 
         stock: 999,
 

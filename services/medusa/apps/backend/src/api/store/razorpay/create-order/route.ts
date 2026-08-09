@@ -1,22 +1,21 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-import {
-  createPaymentCollectionForCartWorkflow,
-  createPaymentSessionsWorkflow,
-} from "@medusajs/core-flows"
+import type { ICartModuleService } from "@medusajs/framework/types"
+
+import Razorpay from "razorpay"
 
 interface CreateOrderRequest {
   cartId: string
 }
-
-const RAZORPAY_PROVIDER_ID = "pp_razorpay_razorpay"
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const body = req.body as CreateOrderRequest
 
   const cartId = body?.cartId?.toString().trim()
 
-  console.log("[razorpay/create-order] Request received", { cartId })
+  console.log("[razorpay/create-order] Request received", {
+    cartId,
+  })
 
   if (!cartId) {
     return res.status(400).json({
@@ -25,25 +24,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
-  try {
-    const query = req.scope.resolve("query")
+  const keyId = process.env.RAZORPAY_KEY_ID
+  const keySecret = process.env.RAZORPAY_KEY_SECRET
 
-    let { data: carts } = await query.graph({
-      entity: "cart",
-      fields: [
-        "id",
-        "currency_code",
-        "completed_at",
-        "total",
-        "payment_collection.*",
-        "payment_collection.payment_sessions.*",
-      ],
-      filters: {
-        id: [cartId],
-      },
+  if (!keyId || !keySecret) {
+    console.error("[razorpay/create-order] Razorpay credentials are missing")
+
+    return res.status(500).json({
+      success: false,
+      message: "Razorpay credentials are not configured on the backend.",
     })
+  }
 
-    const cart: any = carts?.[0]
+  const razorpay = new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  })
+
+  const cartService = req.scope.resolve("cart") as ICartModuleService
+
+  try {
+    const cart: any = await cartService.retrieveCart(cartId, {
+      select: ["id", "currency_code", "completed_at", "total", "raw_total"],
+    })
 
     if (!cart) {
       return res.status(404).json({
@@ -59,106 +62,91 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
     }
 
-    let paymentCollection = cart.payment_collection
+    let amount = 0
 
-    if (!paymentCollection) {
-      const { result } = await createPaymentCollectionForCartWorkflow(
-        req.scope
-      ).run({
-        input: {
-          cart_id: cartId,
-        },
-      })
-
-      paymentCollection = result
-
-      const refreshed = await query.graph({
-        entity: "cart",
-        fields: [
-          "id",
-          "currency_code",
-          "completed_at",
-          "total",
-          "payment_collection.*",
-          "payment_collection.payment_sessions.*",
-        ],
-        filters: {
-          id: [cartId],
-        },
-      })
-
-      carts = refreshed.data
-      paymentCollection = carts?.[0]?.payment_collection
+    if (typeof cart.raw_total === "number") {
+      amount = cart.raw_total
+    } else if (typeof cart.raw_total === "string") {
+      amount = Number(cart.raw_total)
+    } else if (
+      cart.raw_total &&
+      typeof cart.raw_total === "object" &&
+      "value" in cart.raw_total
+    ) {
+      amount = Number(cart.raw_total.value)
+    } else if (typeof cart.total === "number") {
+      amount = cart.total
+    } else if (typeof cart.total === "string") {
+      amount = Number(cart.total)
+    } else if (
+      cart.total &&
+      typeof cart.total === "object" &&
+      "numeric_" in cart.total
+    ) {
+      amount = Number(cart.total.numeric_)
     }
 
-    if (!paymentCollection?.id) {
-      return res.status(500).json({
+    const currency = (cart.currency_code || "INR").toUpperCase()
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({
         success: false,
-        message: "Payment collection could not be created.",
+        message: `Invalid cart amount: ${amount}`,
       })
     }
 
-    let paymentSession = paymentCollection.payment_sessions?.find(
-      (session: any) =>
-        session.provider_id === RAZORPAY_PROVIDER_ID &&
-        session.status === "pending"
-    )
+    /*
+     * Medusa cart total is in major currency units.
+     *
+     * ₹149 = 149 INR
+     *
+     * Razorpay requires the smallest currency unit.
+     *
+     * ₹149 = 14900 paise
+     */
+    const razorpayAmount = Math.round(amount * 100)
 
-    if (!paymentSession) {
-      const { result } = await createPaymentSessionsWorkflow(req.scope).run({
-        input: {
-          payment_collection_id: paymentCollection.id,
-          provider_id: RAZORPAY_PROVIDER_ID,
-        },
-      })
+    console.log("[razorpay/create-order] Amount conversion", {
+      cartAmount: amount,
+      razorpayAmount,
+      currency,
+    })
 
-      paymentSession = result
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency,
+      receipt: `order_${Date.now()}`,
+      payment_capture: 1,
+      notes: {
+        medusa_cart_id: cartId,
+      },
+    })
+
+    if (!order?.id) {
+      throw new Error("Razorpay did not return an order ID.")
     }
 
-    if (!paymentSession) {
-      return res.status(500).json({
-        success: false,
-        message: "Razorpay payment session could not be created.",
-      })
-    }
-
-    const data = (paymentSession.data || {}) as Record<string, any>
-
-    const razorpayOrderId = data.razorpay_order_id
-
-    if (!razorpayOrderId) {
-      return res.status(500).json({
-        success: false,
-        message: "Razorpay order ID was not created.",
-      })
-    }
-
-    console.log("[razorpay/create-order] Payment session ready", {
+    console.log("[razorpay/create-order] Razorpay order created", {
       cartId,
-      paymentSessionId: paymentSession.id,
-      razorpayOrderId,
-      amount: paymentSession.amount,
-      currency: paymentSession.currency_code || cart.currency_code,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
     })
 
     return res.status(200).json({
       success: true,
       order: {
-        id: razorpayOrderId,
-        amount: Number(paymentSession.amount),
-        currency: (
-          paymentSession.currency_code ||
-          cart.currency_code ||
-          "INR"
-        ).toUpperCase(),
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        receipt: order.receipt,
       },
-      payment_session_id: paymentSession.id,
     })
   } catch (error: any) {
     console.error("[razorpay/create-order] Failed", {
       name: error?.name,
       message: error?.message,
-      stack: error?.stack,
+      statusCode: error?.statusCode,
     })
 
     return res.status(500).json({
