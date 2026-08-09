@@ -4,7 +4,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { createRazorpayOrder, loadRazorpayScript, verifyRazorpayPayment } from "@/services/payment"
+import {
+  createRazorpayOrder,
+  loadRazorpayScript,
+  verifyRazorpayPayment,
+} from "@/services/payment"
 import { useCartStore, useCheckoutStore } from "@/store"
 import type { CartItem } from "@/types"
 
@@ -27,7 +31,9 @@ export default function CheckoutSummary({ items }: Props) {
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
   const isRazorpay = paymentMethod === "razorpay"
-  const buttonLabel = isRazorpay ? "Pay Securely" : "Cash on Delivery not available"
+  const buttonLabel = isRazorpay
+    ? "Pay Securely"
+    : "Cash on Delivery not available"
 
   async function handlePayment() {
     if (!isRazorpay || items.length === 0) {
@@ -67,26 +73,46 @@ export default function CheckoutSummary({ items }: Props) {
       if (!Razorpay) {
         throw new Error("Razorpay SDK is not available.")
       }
-
+      console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID =", razorpayKey)
+      console.log("ORDER RESPONSE =", orderResponse)
       const options = {
         key: razorpayKey,
-        amount: orderResponse.order.amount,
+        order_id: orderResponse.order.id,
+        amount: Number(orderResponse.order.amount),
         currency: orderResponse.order.currency,
         name: "Rustar Commerce",
         description: "Complete your payment securely",
-        order_id: orderResponse.order.id,
+
+        prefill: {
+          name: "",
+          email: "",
+          contact: "",
+        },
+
+        theme: {
+          color: "#2563eb",
+        },
         handler: async (response: {
           razorpay_payment_id: string
           razorpay_order_id: string
           razorpay_signature: string
         }) => {
           try {
-            const verification = await verifyRazorpayPayment(response)
+            const cartId = useCartStore.getState().cartId
 
-            if (!verification?.success) {
-              throw new Error(
-                verification?.message ?? "Payment verification failed."
-              )
+            if (!cartId) {
+              throw new Error("Cart ID missing.")
+            }
+
+            const verification = await verifyRazorpayPayment({
+              cartId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            })
+
+            if (!verification.success) {
+              throw new Error(verification.message)
             }
 
             setRazorpayData(
@@ -100,16 +126,37 @@ export default function CheckoutSummary({ items }: Props) {
           } catch (error) {
             setLoading(false)
             console.error(error)
-            alert((error as Error).message ?? "Payment verification failed.")
+            alert((error as Error).message)
           }
         },
         modal: {
-          ondismiss: () => {
+          ondismiss() {
+            console.log("Checkout dismissed")
             setLoading(false)
           },
         },
       }
-
+      console.log(
+        JSON.stringify(
+          {
+            key: options.key,
+            amount: options.amount,
+            currency: options.currency,
+            order_id: options.order_id,
+            name: options.name,
+            description: options.description,
+          },
+          null,
+          2
+        )
+      )
+      console.log({
+        key: options.key,
+        order_id: options.order_id,
+        amount: options.amount,
+        currency: options.currency,
+      })
+      console.log("======================================")
       const checkout = new Razorpay(options)
       checkout.open()
     } catch (error) {
