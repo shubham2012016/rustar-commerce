@@ -103,7 +103,9 @@ export const useCartStore = create<CartState>()(
       retrieveCart: async () => {
         const state = get()
 
-        console.log("[cart] retrieveCart start", { cartId: state.cartId })
+        console.log("[cart] retrieveCart start", {
+          cartId: state.cartId,
+        })
 
         if (!state.cartId) {
           return
@@ -115,17 +117,67 @@ export const useCartStore = create<CartState>()(
           console.log("[cart] retrieveCart calling retrieveCart", {
             cartId: state.cartId,
           })
+
           const cart = await retrieveCart(state.cartId)
-          set({ items: mapCartItems(cart), loading: false })
+
+          // A completed Medusa cart is permanently closed.
+          // Never keep it as the active storefront cart.
+          if ((cart as any)?.completed_at) {
+            console.log(
+              "[cart] completed cart detected, resetting local cart",
+              {
+                cartId: state.cartId,
+                completedAt: (cart as any).completed_at,
+              }
+            )
+
+            set({
+              cartId: null,
+              items: [],
+              loading: false,
+              error: null,
+            })
+
+            return
+          }
+
+          set({
+            items: mapCartItems(cart),
+            loading: false,
+          })
+
           console.log("[cart] retrieveCart finished", {
             cartId: state.cartId,
             itemsCount: (cart?.items as unknown[] | undefined)?.length ?? 0,
           })
         } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+
+          // Medusa can reject operations on an already completed cart.
+          // Treat that cart as invalid and start fresh.
+          if (/already completed/i.test(message)) {
+            console.log(
+              "[cart] completed cart rejected by Medusa, resetting local cart",
+              {
+                cartId: state.cartId,
+              }
+            )
+
+            set({
+              cartId: null,
+              items: [],
+              loading: false,
+              error: null,
+            })
+
+            return
+          }
+
           set({
             loading: false,
-            error: (error as Error).message ?? "Failed to retrieve cart.",
+            error: message || "Failed to retrieve cart.",
           })
+
           throw error
         }
       },
@@ -138,21 +190,53 @@ export const useCartStore = create<CartState>()(
         set({ loading: true, error: null })
 
         try {
-          if (!state.cartId) {
+          if (!get().cartId) {
             console.log("[cart] addItem no cartId found, creating cart")
             await get().createCartIfNeeded()
           }
 
-          console.log("[cart] addItem about to call addLineItem", {
-            cartId: get().cartId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-          })
-          const cart = await addLineItem(
-            get().cartId ?? "",
-            item.variantId,
-            item.quantity
-          )
+          let cart
+
+          try {
+            console.log("[cart] addItem about to call addLineItem", {
+              cartId: get().cartId,
+              variantId: item.variantId,
+              quantity: item.quantity,
+            })
+
+            cart = await addLineItem(
+              get().cartId ?? "",
+              item.variantId,
+              item.quantity
+            )
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : String(error)
+
+            // The old persisted cart has been completed by Medusa.
+            // Discard it and retry once using a fresh cart.
+            if (/already completed/i.test(message)) {
+              console.log(
+                "[cart] active cart is completed, creating a fresh cart"
+              )
+
+              set({
+                cartId: null,
+                items: [],
+                error: null,
+              })
+
+              await get().createCartIfNeeded()
+
+              cart = await addLineItem(
+                get().cartId ?? "",
+                item.variantId,
+                item.quantity
+              )
+            } else {
+              throw error
+            }
+          }
 
           // Map backend cart items to our UI model
           const mappedItems = mapCartItems(cart)

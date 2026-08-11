@@ -171,8 +171,11 @@ export default function CheckoutSummary({ items }: Props) {
               response.razorpay_signature
             )
 
-            setLoading(false)
+            // Payment succeeded and Medusa has completed the order.
+            // The completed cart must never be reused.
+            useCartStore.getState().clearCart()
 
+            setLoading(false)
             router.push("/checkout/success")
           } catch (error) {
             setLoading(false)
