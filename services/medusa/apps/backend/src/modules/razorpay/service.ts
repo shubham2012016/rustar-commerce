@@ -246,11 +246,35 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
     try {
       const amount = Number(input.amount)
 
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          "Invalid refund amount"
+        )
+      }
+
+      const currency = String(input.currency_code || "INR").toUpperCase()
+
+      if (currency !== "INR") {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Razorpay refunds currently support INR only. Received: ${currency}`
+        )
+      }
+
+      // Medusa amount: ₹149
+      // Razorpay refund amount: 14900 paise
+      const razorpayAmount = Math.round(amount * 100)
+
+      this.logger_?.info?.(
+        `Razorpay refund amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
+      )
+
       const refund = await this.razorpayRequest(
         `/payments/${paymentId}/refund`,
         "POST",
         {
-          amount,
+          amount: razorpayAmount,
         }
       )
 
