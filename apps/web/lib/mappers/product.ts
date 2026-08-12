@@ -3,7 +3,7 @@ import type { HttpTypes } from "@medusajs/types"
 import type { Product } from "@/types"
 
 function fromMedusaAmount(amount: number | null | undefined) {
-  return Number(amount ?? 0) / 100
+  return Number(amount ?? 0)
 }
 
 export function mapProduct(product: HttpTypes.StoreProduct): Product {

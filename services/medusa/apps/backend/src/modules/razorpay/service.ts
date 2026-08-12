@@ -107,8 +107,17 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
 
       const currency = input.currency_code.toUpperCase()
 
+      // Medusa amount: ₹149
+      // Razorpay expects smallest currency unit:
+      // ₹149 = 14900 paise
+      const razorpayAmount = Math.round(amount * 100)
+
+      this.logger_?.info?.(
+        `Razorpay amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
+      )
+
       const order = await this.razorpayRequest("/orders", "POST", {
-        amount,
+        amount: razorpayAmount,
         currency,
         receipt: `medusa_${Date.now()}`,
         notes: {

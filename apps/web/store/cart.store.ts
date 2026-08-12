@@ -53,8 +53,8 @@ function mapCartItems(
         "",
       price:
         typeof lineItem.unit_price === "number"
-          ? lineItem.unit_price / 100
-          : Number(lineItem.unit_price ?? 0) / 100,
+          ? lineItem.unit_price
+          : Number(lineItem.unit_price ?? 0),
       quantity: (lineItem.quantity as number) ?? 0,
       variantId: (lineItem.variant_id as string) ?? "",
       variantName: (lineItem.title as string) ?? "",

@@ -4,7 +4,7 @@ import type { ICartModuleService } from "@medusajs/framework/types"
 
 import { completeCartWorkflow } from "@medusajs/core-flows"
 
-import { verifySignature } from "../../../../lib/payment"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 interface VerifyPaymentRequest {
   cartId: string
@@ -13,39 +13,27 @@ interface VerifyPaymentRequest {
   razorpay_signature: string
 }
 
+const RAZORPAY_PROVIDER_ID = "pp_razorpay_razorpay"
+
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const body = req.body as VerifyPaymentRequest
 
   const cartId = body?.cartId?.toString().trim()
 
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body
+  const razorpayOrderId = body?.razorpay_order_id?.toString().trim()
 
-  if (
-    !cartId ||
-    !razorpay_order_id ||
-    !razorpay_payment_id ||
-    !razorpay_signature
-  ) {
+  const razorpayPaymentId = body?.razorpay_payment_id?.toString().trim()
+
+  const razorpaySignature = body?.razorpay_signature?.toString().trim()
+
+  if (!cartId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
     return res.status(400).json({
       success: false,
       message: "Missing required cart or Razorpay payment fields.",
     })
   }
 
-  const isValid = verifySignature(
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature
-  )
-
-  if (!isValid) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid Razorpay signature.",
-    })
-  }
-
-  const cartService = req.scope.resolve("cart") as ICartModuleService
+  const cartService = req.scope.resolve(Modules.CART) as ICartModuleService
 
   try {
     const cart = await cartService.retrieveCart(cartId)
@@ -66,6 +54,79 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
     }
 
+    /*
+     * Retrieve the cart's payment collection and payment sessions.
+     */
+    const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+
+    const { data: carts } = await query.graph({
+      entity: "cart",
+      fields: [
+        "id",
+        "payment_collection.id",
+        "payment_collection.payment_sessions.*",
+      ],
+      filters: {
+        id: cartId,
+      },
+    })
+
+    const cartWithPayment = carts?.[0]
+
+    const paymentCollection = cartWithPayment?.payment_collection
+
+    if (!paymentCollection?.id) {
+      throw new Error("Payment collection has not been initialized for cart.")
+    }
+
+    const paymentSession = paymentCollection.payment_sessions?.find(
+      (session: any) => session.provider_id === RAZORPAY_PROVIDER_ID
+    )
+
+    if (!paymentSession) {
+      throw new Error("Razorpay payment session was not found for cart.")
+    }
+
+    /*
+     * Store Razorpay callback data inside the Medusa
+     * payment session.
+     *
+     * completeCartWorkflow will later pass this data
+     * to RazorpayPaymentProviderService.authorizePayment().
+     */
+    const paymentModuleService = req.scope.resolve(Modules.PAYMENT) as any
+
+    await paymentModuleService.updatePaymentSession({
+      id: paymentSession.id,
+      currency_code: paymentSession.currency_code,
+      amount: paymentSession.amount,
+      data: {
+        ...(paymentSession.data || {}),
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        razorpay_signature: razorpaySignature,
+      },
+    })
+
+    console.log("[razorpay/verify] Payment session updated", {
+      cartId,
+      paymentSessionId: paymentSession.id,
+      razorpayOrderId,
+      razorpayPaymentId,
+    })
+
+    /*
+     * IMPORTANT:
+     *
+     * completeCartWorkflow will now call
+     * RazorpayPaymentProviderService.authorizePayment()
+     *
+     * That method performs:
+     * - Razorpay payment retrieval
+     * - order/payment relationship check
+     * - signature verification
+     * - captured/authorized status check
+     */
     const { result } = await completeCartWorkflow(req.scope).run({
       input: {
         id: cartId,
@@ -77,18 +138,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       orderId: result.id,
       cartId,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("[razorpay/verify] Failed", {
-      name: (error as Error)?.name,
-      message: (error as Error)?.message,
-      stack: (error as Error)?.stack,
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
     })
 
     return res.status(500).json({
       success: false,
       message:
-        (error as Error)?.message ||
-        "Failed to verify payment and complete the cart.",
+        error?.message || "Failed to verify payment and complete the cart.",
     })
   }
 }

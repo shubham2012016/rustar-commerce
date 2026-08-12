@@ -3,6 +3,7 @@ import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
 import type {
   CreateFulfillmentResult,
   CalculateShippingOptionPriceDTO,
+  CalculatedShippingOptionPrice,
   FulfillmentOption,
   ValidateFulfillmentDataContext,
 } from "@medusajs/framework/types"
@@ -94,9 +95,17 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     option: CalculateShippingOptionPriceDTO["option"],
     data: CalculateShippingOptionPriceDTO["data"],
     cart: CalculateShippingOptionPriceDTO["cart"]
-  ): Promise<number> {
-    // Rustar Chem currently offers free shipping.
-    return 0
+  ): Promise<CalculatedShippingOptionPrice> {
+    // Rustar Chem currently offers FREE SHIPPING.
+    //
+    // IMPORTANT:
+    // Medusa expects calculated shipping prices to be returned
+    // as a CalculatedShippingOptionPrice object, not a raw number.
+
+    return {
+      calculated_amount: 0,
+      is_calculated_price_tax_inclusive: true,
+    }
   }
 
   async canCalculate(data: Record<string, unknown>): Promise<boolean> {

@@ -1,16 +1,18 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-import type { ICartModuleService } from "@medusajs/framework/types"
-
-import Razorpay from "razorpay"
+import {
+  createPaymentCollectionForCartWorkflow,
+  createPaymentSessionsWorkflow,
+} from "@medusajs/core-flows"
 
 interface CreateOrderRequest {
   cartId: string
 }
 
+const RAZORPAY_PROVIDER_ID = "pp_razorpay_razorpay"
+
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const body = req.body as CreateOrderRequest
-
   const cartId = body?.cartId?.toString().trim()
 
   console.log("[razorpay/create-order] Request received", {
@@ -24,134 +26,93 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-
-  if (!keyId || !keySecret) {
-    console.error("[razorpay/create-order] Razorpay credentials are missing")
-
-    return res.status(500).json({
-      success: false,
-      message: "Razorpay credentials are not configured on the backend.",
-    })
-  }
-
-  const razorpay = new Razorpay({
-    key_id: keyId,
-    key_secret: keySecret,
-  })
-
-  const cartService = req.scope.resolve("cart") as ICartModuleService
-
   try {
-    const cart: any = await cartService.retrieveCart(cartId, {
-      select: ["id", "currency_code", "completed_at", "total", "raw_total"],
+    /*
+     * Step 1:
+     * Create / initialize the Medusa payment collection
+     * for this cart.
+     */
+    const { result: paymentCollection } =
+      await createPaymentCollectionForCartWorkflow(req.scope).run({
+        input: {
+          cart_id: cartId,
+        },
+      })
+
+    console.log("[razorpay/create-order] Payment collection ready", {
+      cartId,
+      paymentCollectionId: paymentCollection.id,
     })
-
-    if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: "Cart not found.",
-      })
-    }
-
-    if (cart.completed_at) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart already completed.",
-      })
-    }
-
-    let amount = 0
-
-    if (typeof cart.raw_total === "number") {
-      amount = cart.raw_total
-    } else if (typeof cart.raw_total === "string") {
-      amount = Number(cart.raw_total)
-    } else if (
-      cart.raw_total &&
-      typeof cart.raw_total === "object" &&
-      "value" in cart.raw_total
-    ) {
-      amount = Number(cart.raw_total.value)
-    } else if (typeof cart.total === "number") {
-      amount = cart.total
-    } else if (typeof cart.total === "string") {
-      amount = Number(cart.total)
-    } else if (
-      cart.total &&
-      typeof cart.total === "object" &&
-      "numeric_" in cart.total
-    ) {
-      amount = Number(cart.total.numeric_)
-    }
-
-    const currency = (cart.currency_code || "INR").toUpperCase()
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid cart amount: ${amount}`,
-      })
-    }
 
     /*
-     * Medusa cart total is in major currency units.
+     * Step 2:
+     * Create the Medusa payment session.
      *
-     * ₹149 = 149 INR
+     * This invokes:
      *
-     * Razorpay requires the smallest currency unit.
+     * RazorpayPaymentProviderService.initiatePayment()
      *
-     * ₹149 = 14900 paise
+     * which creates the actual Razorpay order.
      */
-    const razorpayAmount = Math.round(amount * 100)
-
-    console.log("[razorpay/create-order] Amount conversion", {
-      cartAmount: amount,
-      razorpayAmount,
-      currency,
-    })
-
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100),
-      currency,
-      receipt: `order_${Date.now()}`,
-      payment_capture: 1,
-      notes: {
-        medusa_cart_id: cartId,
+    const { result: paymentSession } = await createPaymentSessionsWorkflow(
+      req.scope
+    ).run({
+      input: {
+        payment_collection_id: paymentCollection.id,
+        provider_id: RAZORPAY_PROVIDER_ID,
       },
     })
 
-    if (!order?.id) {
-      throw new Error("Razorpay did not return an order ID.")
+    console.log("[razorpay/create-order] Payment session created", {
+      cartId,
+      paymentSessionId: paymentSession.id,
+      providerId: paymentSession.provider_id,
+      data: paymentSession.data,
+    })
+
+    const data = paymentSession.data as Record<string, any>
+
+    const razorpayOrderId = data?.razorpay_order_id
+    const amount = Number(data?.amount ?? paymentSession.amount)
+    const currency =
+      data?.currency ?? paymentSession.currency_code?.toUpperCase()
+
+    if (!razorpayOrderId) {
+      throw new Error(
+        "Razorpay order ID was not returned by the payment provider."
+      )
     }
 
-    console.log("[razorpay/create-order] Razorpay order created", {
-      cartId,
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-    })
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error(
+        `Invalid Razorpay payment amount returned by provider: ${amount}`
+      )
+    }
+
+    if (!currency) {
+      throw new Error("Payment currency was not returned by provider.")
+    }
 
     return res.status(200).json({
       success: true,
       order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        receipt: order.receipt,
+        id: razorpayOrderId,
+        amount,
+        currency,
       },
+      paymentSessionId: paymentSession.id,
+      paymentCollectionId: paymentCollection.id,
     })
   } catch (error: any) {
     console.error("[razorpay/create-order] Failed", {
       name: error?.name,
       message: error?.message,
-      statusCode: error?.statusCode,
+      stack: error?.stack,
     })
 
     return res.status(500).json({
       success: false,
-      message: error?.message || "Failed to create Razorpay order.",
+      message: error?.message || "Failed to create Razorpay payment session.",
     })
   }
 }
