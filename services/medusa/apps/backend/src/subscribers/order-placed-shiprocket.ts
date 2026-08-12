@@ -6,13 +6,6 @@ type OrderPlacedEvent = {
   id: string
 }
 
-/**
- * Automatically sends paid orders to the configured Shiprocket fulfillment
- * provider after Medusa places the order.
- *
- * This runs asynchronously so a Shiprocket outage cannot make a successful
- * Razorpay payment look like a failed checkout to the customer.
- */
 export default async function orderPlacedShiprocketHandler({
   event: { data },
   container,
@@ -27,7 +20,10 @@ export default async function orderPlacedShiprocketHandler({
       fields: [
         "id",
         "display_id",
-        "shipping_methods.shipping_option.provider_id",
+        "shipping_methods.id",
+        "shipping_methods.name",
+        "shipping_methods.shipping_option_id",
+        "shipping_methods.shipping_option.*",
         "items.id",
         "items.quantity",
         "fulfillments.id",
@@ -39,6 +35,14 @@ export default async function orderPlacedShiprocketHandler({
 
     const order = orders?.[0] as any
 
+    logger.info(
+      `[Shiprocket] Order ${data.id} shipping methods resolved: ${JSON.stringify(
+        order?.shipping_methods ?? [],
+        null,
+        2
+      )}`
+    )
+
     if (!order) {
       logger.error(`[Shiprocket] Order not found: ${data.id}`)
       return
@@ -46,24 +50,54 @@ export default async function orderPlacedShiprocketHandler({
 
     if (order.fulfillments?.length) {
       logger.info(
-        `[Shiprocket] Order ${order.display_id ?? order.id} already has a fulfillment. Skipping.`
+        `[Shiprocket] Order ${
+          order.display_id ?? order.id
+        } already has a fulfillment. Skipping.`
       )
       return
     }
 
-    const shippingProviderId = order.shipping_methods?.find(
-      (method: any) =>
-        String(method?.shipping_option?.provider_id ?? "")
-          .toLowerCase()
-          .includes("shiprocket")
-    )?.shipping_option?.provider_id
+    /*
+     * Determine which fulfillment provider is attached
+     * to the shipping option selected for this order.
+     */
+    const shippingMethods = order.shipping_methods ?? []
 
-    if (!shippingProviderId) {
+    logger.info(
+      `[Shiprocket] Order ${
+        order.display_id ?? order.id
+      } shipping methods: ${JSON.stringify(
+        shippingMethods.map((method: any) => ({
+          id: method?.id,
+          name: method?.name,
+          shipping_option_id: method?.shipping_option_id,
+          provider_id: method?.provider_id,
+        }))
+      )}`
+    )
+
+    const shiprocketShippingMethod = shippingMethods.find((method: any) =>
+      String(method?.provider_id ?? "")
+        .toLowerCase()
+        .includes("shiprocket")
+    )
+
+    if (!shiprocketShippingMethod) {
       logger.info(
-        `[Shiprocket] Order ${order.display_id ?? order.id} is not using Shiprocket. Skipping automatic fulfillment.`
+        `[Shiprocket] Order ${
+          order.display_id ?? order.id
+        } is not using Shiprocket. Skipping automatic fulfillment.`
       )
       return
     }
+
+    const providerId = shiprocketShippingMethod.provider_id
+
+    logger.info(
+      `[Shiprocket] Order ${
+        order.display_id ?? order.id
+      } is using Shiprocket provider: ${providerId}`
+    )
 
     const items = (order.items ?? [])
       .filter((item: any) => Number(item.quantity) > 0)
@@ -74,13 +108,17 @@ export default async function orderPlacedShiprocketHandler({
 
     if (!items.length) {
       logger.warn(
-        `[Shiprocket] Order ${order.display_id ?? order.id} has no fulfillable items.`
+        `[Shiprocket] Order ${
+          order.display_id ?? order.id
+        } has no fulfillable items.`
       )
       return
     }
 
     logger.info(
-      `[Shiprocket] Creating fulfillment for order ${order.display_id ?? order.id} using provider ${shippingProviderId}`
+      `[Shiprocket] Creating fulfillment for order ${
+        order.display_id ?? order.id
+      }`
     )
 
     const { result } = await createOrderFulfillmentWorkflow(container).run({
@@ -91,12 +129,20 @@ export default async function orderPlacedShiprocketHandler({
     })
 
     logger.info(
-      `[Shiprocket] Fulfillment created for order ${order.display_id ?? order.id}: ${JSON.stringify(result)}`
+      `[Shiprocket] Fulfillment created for order ${
+        order.display_id ?? order.id
+      }: ${JSON.stringify(result)}`
     )
   } catch (error: any) {
     logger.error(
-      `[Shiprocket] Automatic fulfillment failed for order ${data.id}: ${error?.message || error}`
+      `[Shiprocket] Automatic fulfillment failed for order ${
+        data.id
+      }: ${error?.message || error}`
     )
+
+    if (error?.stack) {
+      logger.error(error.stack)
+    }
   }
 }
 
