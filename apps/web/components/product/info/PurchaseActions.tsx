@@ -29,22 +29,28 @@ export default function PurchaseActions() {
   const setCheckoutItems = useCheckoutStore((state) => state.setItems)
 
   async function handleAddToCart() {
-    setLoading(true)
-    console.log("PRODUCT PAGE QUANTITY:", quantity)
-    addItem({
-      id: product.id,
-      slug: product.slug,
-      sku: selectedVariant.sku,
-      name: product.name,
-      image: product.images[0]?.url ?? "",
-      price: selectedVariant.price,
-      quantity,
-      variantId: selectedVariant.id,
-      variantName: selectedVariant.value,
-      stock: selectedVariant.stock,
-    })
+    if (loading) return
 
-    setLoading(false)
+    setLoading(true)
+
+    console.log("PRODUCT PAGE QUANTITY:", quantity)
+
+    try {
+      await addItem({
+        id: product.id,
+        slug: product.slug,
+        sku: selectedVariant.sku,
+        name: product.name,
+        image: product.images[0]?.url ?? "",
+        price: selectedVariant.price,
+        quantity,
+        variantId: selectedVariant.id,
+        variantName: selectedVariant.value,
+        stock: selectedVariant.stock,
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleWishlist() {

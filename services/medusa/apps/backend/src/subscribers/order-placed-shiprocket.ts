@@ -35,18 +35,18 @@ export default async function orderPlacedShiprocketHandler({
 
     const order = orders?.[0] as any
 
-    logger.info(
-      `[Shiprocket] Order ${data.id} shipping methods resolved: ${JSON.stringify(
-        order?.shipping_methods ?? [],
-        null,
-        2
-      )}`
-    )
-
     if (!order) {
       logger.error(`[Shiprocket] Order not found: ${data.id}`)
       return
     }
+
+    logger.info(
+      `[Shiprocket] Order ${data.id} shipping methods resolved: ${JSON.stringify(
+        order.shipping_methods ?? [],
+        null,
+        2
+      )}`
+    )
 
     if (order.fulfillments?.length) {
       logger.info(
@@ -72,12 +72,13 @@ export default async function orderPlacedShiprocketHandler({
           name: method?.name,
           shipping_option_id: method?.shipping_option_id,
           provider_id: method?.provider_id,
+          shipping_option_provider_id: method?.shipping_option?.provider_id,
         }))
       )}`
     )
 
     const shiprocketShippingMethod = shippingMethods.find((method: any) =>
-      String(method?.provider_id ?? "")
+      String(method?.shipping_option?.provider_id ?? "")
         .toLowerCase()
         .includes("shiprocket")
     )
@@ -91,7 +92,7 @@ export default async function orderPlacedShiprocketHandler({
       return
     }
 
-    const providerId = shiprocketShippingMethod.provider_id
+    const providerId = shiprocketShippingMethod.shipping_option?.provider_id
 
     logger.info(
       `[Shiprocket] Order ${
