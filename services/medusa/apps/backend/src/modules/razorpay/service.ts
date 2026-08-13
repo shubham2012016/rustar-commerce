@@ -107,27 +107,61 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
 
       const currency = input.currency_code.toUpperCase()
 
-      // Medusa amount: ₹149
-      // Razorpay expects smallest currency unit:
-      // ₹149 = 14900 paise
+      /*
+       * Current application behavior:
+       *
+       * Medusa amount received here is treated as the major-unit
+       * amount and converted to Razorpay's smallest currency unit.
+       *
+       * Example:
+       * ₹149 -> 14900 paise
+       */
       const razorpayAmount = Math.round(amount * 100)
 
       this.logger_?.info?.(
-        `Razorpay amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
+        `[Razorpay] Amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
       )
 
       const order = await this.razorpayRequest("/orders", "POST", {
         amount: razorpayAmount,
         currency,
+
         receipt: `medusa_${Date.now()}`,
+
+        /*
+         * Automatically capture successful payments.
+         *
+         * This prevents Razorpay payments from remaining merely
+         * authorized after successful checkout.
+         */
+        payment_capture: 1,
+
         notes: {
-          payment_session_id: input.data?.session_id || "",
+          payment_session_id: input.data?.session_id?.toString() || "",
         },
       })
 
+      if (!order?.id) {
+        throw new Error("Razorpay did not return an order ID")
+      }
+
+      this.logger_?.info?.(
+        `[Razorpay] Created order ${order.id} for payment session ${
+          input.data?.session_id || "unknown"
+        }`
+      )
+
       return {
         id: order.id,
+
+        /*
+         * Preserve Medusa's existing payment session data.
+         * This is important because other parts of the payment
+         * flow may depend on values stored in input.data.
+         */
         data: {
+          ...input.data,
+
           razorpay_order_id: order.id,
           amount: order.amount,
           currency: order.currency,
@@ -136,8 +170,12 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
       }
     } catch (error: any) {
       this.logger_?.error?.(
-        `Razorpay initiatePayment failed: ${error?.message || error}`
+        `[Razorpay] initiatePayment failed: ${error?.message || error}`
       )
+
+      if (error instanceof MedusaError) {
+        throw error
+      }
 
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
@@ -151,11 +189,11 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
   ): Promise<AuthorizePaymentOutput> {
     const data = input.data as Record<string, any>
 
-    const razorpayOrderId = data?.razorpay_order_id
+    const razorpayOrderId = data?.razorpay_order_id?.toString()
 
-    const razorpayPaymentId = data?.razorpay_payment_id
+    const razorpayPaymentId = data?.razorpay_payment_id?.toString()
 
-    const razorpaySignature = data?.razorpay_signature
+    const razorpaySignature = data?.razorpay_signature?.toString()
 
     if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
       throw new MedusaError(
@@ -190,6 +228,14 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
         )
       }
 
+      /*
+       * A successful Razorpay payment can be:
+       *
+       * captured  -> already paid
+       * authorized -> payment authorized but not captured yet
+       *
+       * Both are valid at authorization stage.
+       */
       if (payment.status !== "captured" && payment.status !== "authorized") {
         throw new MedusaError(
           MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
@@ -197,8 +243,13 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
         )
       }
 
+      this.logger_?.info?.(
+        `[Razorpay] Payment ${razorpayPaymentId} verified successfully. Status: ${payment.status}`
+      )
+
       return {
         status: "authorized",
+
         data: {
           ...data,
           razorpay_payment: payment,
@@ -213,7 +264,7 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
       }
 
       this.logger_?.error?.(
-        `Razorpay authorizePayment failed: ${error?.message || error}`
+        `[Razorpay] authorizePayment failed: ${error?.message || error}`
       )
 
       throw new MedusaError(
@@ -226,10 +277,88 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
   async capturePayment(
     input: CapturePaymentInput
   ): Promise<CapturePaymentOutput> {
-    return {
-      data: {
-        ...input.data,
-      },
+    const data = input.data as Record<string, any>
+
+    const razorpayPaymentId = data?.razorpay_payment_id
+
+    if (!razorpayPaymentId) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Razorpay payment ID is required for capture"
+      )
+    }
+
+    try {
+      const amount = Number(input.amount)
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          "Invalid capture amount"
+        )
+      }
+
+      const currency = String(input.currency_code || "INR").toUpperCase()
+
+      if (currency !== "INR") {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Razorpay capture currently supports INR only. Received: ${currency}`
+        )
+      }
+
+      // Medusa amount is rupees.
+      // Razorpay expects paise.
+      const razorpayAmount = Math.round(amount * 100)
+
+      this.logger_?.info?.(
+        `Razorpay capture: payment=${razorpayPaymentId}, amount=${amount} ${currency}, razorpay_amount=${razorpayAmount}`
+      )
+
+      const payment = await this.razorpayRequest(
+        `/payments/${razorpayPaymentId}/capture`,
+        "POST",
+        {
+          amount: razorpayAmount,
+          currency,
+        }
+      )
+
+      if (!payment?.id) {
+        throw new Error("Razorpay did not return a payment after capture")
+      }
+
+      if (payment.status !== "captured") {
+        throw new Error(
+          `Razorpay capture did not complete. Status: ${payment.status}`
+        )
+      }
+
+      this.logger_?.info?.(
+        `Razorpay payment captured successfully: ${payment.id}`
+      )
+
+      return {
+        data: {
+          ...data,
+          razorpay_payment_id: payment.id,
+          razorpay_payment: payment,
+          razorpay_capture_id: payment.id,
+        },
+      }
+    } catch (error: any) {
+      this.logger_?.error?.(
+        `Razorpay capturePayment failed: ${error?.message || error}`
+      )
+
+      if (error instanceof MedusaError) {
+        throw error
+      }
+
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Failed to capture Razorpay payment: ${error?.message || error}`
+      )
     }
   }
 
@@ -262,12 +391,14 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
         )
       }
 
-      // Medusa amount: ₹149
-      // Razorpay refund amount: 14900 paise
+      /*
+       * Keep the existing refund conversion unchanged for now.
+       * We are not mixing refund amount semantics into this fix.
+       */
       const razorpayAmount = Math.round(amount * 100)
 
       this.logger_?.info?.(
-        `Razorpay refund amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
+        `[Razorpay] Refund amount conversion: Medusa=${amount} ${currency}, Razorpay=${razorpayAmount} subunits`
       )
 
       const refund = await this.razorpayRequest(
@@ -285,6 +416,10 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
         },
       }
     } catch (error: any) {
+      if (error instanceof MedusaError) {
+        throw error
+      }
+
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         `Razorpay refund failed: ${error?.message || error}`
@@ -357,16 +492,24 @@ class RazorpayPaymentProviderService extends AbstractPaymentProvider {
 
       switch (payment.status) {
         case "captured":
-          return { status: "captured" }
+          return {
+            status: "captured",
+          }
 
         case "authorized":
-          return { status: "authorized" }
+          return {
+            status: "authorized",
+          }
 
         case "failed":
-          return { status: "error" }
+          return {
+            status: "error",
+          }
 
         default:
-          return { status: "pending" }
+          return {
+            status: "pending",
+          }
       }
     } catch {
       return {
