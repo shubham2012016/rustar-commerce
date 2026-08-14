@@ -29,6 +29,7 @@ export class ShiprocketClient {
   ): Promise<T> {
     const response = await fetch(`${SHIPROCKET_BASE_URL}${endpoint}`, {
       ...options,
+
       headers: {
         "Content-Type": "application/json",
 
@@ -64,6 +65,7 @@ export class ShiprocketClient {
   async authenticate(): Promise<string> {
     const response = await this.request<ShiprocketAuthResponse>("/auth/login", {
       method: "POST",
+
       body: JSON.stringify({
         email: this.email,
         password: this.password,
@@ -86,6 +88,7 @@ export class ShiprocketClient {
 
     return this.request<unknown>("/orders/create/adhoc", {
       method: "POST",
+
       body: JSON.stringify(payload),
     })
   }
@@ -95,6 +98,7 @@ export class ShiprocketClient {
 
     return this.request<unknown>("/courier/assign/awb", {
       method: "POST",
+
       body: JSON.stringify({
         shipment_id: shipmentId,
 
@@ -112,6 +116,7 @@ export class ShiprocketClient {
 
     return this.request<unknown>("/courier/generate/pickup", {
       method: "POST",
+
       body: JSON.stringify({
         shipment_id: [shipmentId],
       }),
@@ -123,6 +128,7 @@ export class ShiprocketClient {
 
     return this.request<unknown>("/courier/generate/label", {
       method: "POST",
+
       body: JSON.stringify({
         shipment_id: [shipmentId],
       }),
@@ -142,6 +148,7 @@ export class ShiprocketClient {
 
     return this.request<unknown>("/orders/cancel/shipment/awbs", {
       method: "POST",
+
       body: JSON.stringify({
         awbs: [awb],
       }),
