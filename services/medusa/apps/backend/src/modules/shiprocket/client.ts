@@ -19,6 +19,10 @@ export class ShiprocketClient {
     this.password = credentials.password
   }
 
+  async trackAWB(awb: string) {
+    return this.request(`/courier/track/awb/${encodeURIComponent(awb)}`)
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}

@@ -6,8 +6,8 @@ type OrderPlacedEvent = {
   id: string
 }
 
-const MAX_ATTEMPTS = 5
-const RETRY_DELAY_MS = 1000
+const MAX_ATTEMPTS = 10
+const RETRY_DELAY_MS = 1500
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -20,51 +20,38 @@ function isShiprocketProvider(providerId: unknown) {
 }
 
 export default async function orderPlacedShiprocketHandler({
-  event: { data },
+  event,
   container,
 }: SubscriberArgs<OrderPlacedEvent>) {
-  const logger = container.resolve("logger")
-
-  const orderId = data?.id
+  const orderId = event.data?.id
 
   if (!orderId) {
-    logger.error(
-      "[Shiprocket] order.placed event does not contain an order ID."
-    )
+    console.error("[Shiprocket] Missing order ID")
     return
   }
 
+  console.log("[Shiprocket] ==================================================")
+  console.log(`[Shiprocket] Processing order ${orderId}`)
+
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
-  try {
-    logger.info(
-      `[Shiprocket] Processing order ${orderId} for automatic fulfillment`
-    )
+  let order: any = null
 
-    let order: any = null
+  // ---------------------------------------------------------
+  // 1. Load order
+  // ---------------------------------------------------------
 
-    /*
-     * The order.placed event can be processed before all linked
-     * order relations are immediately available to the query layer.
-     *
-     * Retry a few times instead of permanently skipping fulfillment.
-     */
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const { data: orders } = await query.graph({
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await query.graph({
         entity: "order",
         fields: [
           "id",
           "display_id",
-          "email",
-
+          "items.*",
           "shipping_address.*",
           "billing_address.*",
-
           "shipping_methods.*",
-          "shipping_methods.shipping_option.*",
-
-          "items.*",
-
           "fulfillments.*",
         ],
         filters: {
@@ -72,189 +59,217 @@ export default async function orderPlacedShiprocketHandler({
         },
       })
 
-      order = orders?.[0] as any
+      order = result.data?.[0]
 
-      if (!order) {
-        logger.warn(
-          `[Shiprocket] Attempt ${attempt}/${MAX_ATTEMPTS}: order ${orderId} not available yet.`
-        )
-      } else {
+      console.log(
+        `[Shiprocket] Query attempt ${attempt}/${MAX_ATTEMPTS}: ${
+          order ? "order found" : "order not found"
+        }`
+      )
+
+      if (order) {
         const shippingMethods = order.shipping_methods ?? []
         const items = order.items ?? []
 
-        logger.info(
-          `[Shiprocket] Attempt ${attempt}/${MAX_ATTEMPTS} - Order ${
-            order.display_id ?? order.id
-          } state: ${JSON.stringify(
-            {
-              shipping_methods: shippingMethods.map((method: any) => ({
-                id: method?.id,
-                name: method?.name,
-                shipping_option_id: method?.shipping_option_id,
-                provider_id: method?.provider_id,
-                shipping_option_provider_id:
-                  method?.shipping_option?.provider_id,
-              })),
-              items: items.map((item: any) => ({
-                id: item?.id,
-                title: item?.title,
-                quantity: item?.quantity,
-              })),
-              fulfillments: (order.fulfillments ?? []).map(
-                (fulfillment: any) => ({
-                  id: fulfillment?.id,
-                })
-              ),
-            },
-            null,
-            2
-          )}`
+        console.log(
+          `[Shiprocket] Relations: shipping_methods=${shippingMethods.length}, items=${items.length}`
         )
 
-        /*
-         * Once both shipping methods and items are present,
-         * we have enough information to continue.
-         */
-        if (shippingMethods.length > 0 && items.length > 0) {
+        if (shippingMethods.length && items.length) {
           break
         }
       }
-
-      if (attempt < MAX_ATTEMPTS) {
-        await sleep(RETRY_DELAY_MS)
-      }
-    }
-
-    if (!order) {
-      logger.error(
-        `[Shiprocket] Order ${orderId} could not be retrieved after ${MAX_ATTEMPTS} attempts.`
+    } catch (error: any) {
+      console.error(
+        `[Shiprocket] Query attempt ${attempt} failed:`,
+        error?.message || error
       )
-      return
     }
 
-    /*
-     * Never create a second fulfillment.
-     */
-    if (order.fulfillments?.length) {
-      logger.info(
-        `[Shiprocket] Order ${
-          order.display_id ?? order.id
-        } already has a fulfillment. Skipping.`
-      )
-      return
+    if (attempt < MAX_ATTEMPTS) {
+      await sleep(RETRY_DELAY_MS)
     }
+  }
 
-    const shippingMethods = order.shipping_methods ?? []
+  if (!order) {
+    console.error(
+      `[Shiprocket] Could not retrieve order ${orderId} after ${MAX_ATTEMPTS} attempts.`
+    )
+    return
+  }
 
-    if (!shippingMethods.length) {
-      logger.warn(
-        `[Shiprocket] Order ${
-          order.display_id ?? order.id
-        } has no shipping method after ${MAX_ATTEMPTS} attempts.`
-      )
-      return
-    }
+  const displayId = order.display_id ?? orderId
 
-    /*
-     * Determine whether the selected shipping option belongs
-     * to the Shiprocket fulfillment provider.
-     */
-    const shiprocketShippingMethod = shippingMethods.find((method: any) => {
-      const candidates = [
-        method?.provider_id,
-        method?.shipping_option?.provider_id,
-      ]
+  console.log(
+    `[Shiprocket] Order ${displayId} state:`,
+    JSON.stringify(
+      {
+        id: order.id,
+        display_id: order.display_id,
+        shipping_methods: order.shipping_methods ?? [],
+        items: (order.items ?? []).map((item: any) => ({
+          id: item?.id,
+          title: item?.title,
+          quantity: item?.quantity,
+        })),
+        fulfillments: (order.fulfillments ?? []).map((fulfillment: any) => ({
+          id: fulfillment?.id,
+          provider_id: fulfillment?.provider_id,
+          data: fulfillment?.data,
+        })),
+      },
+      null,
+      2
+    )
+  )
 
-      return candidates.some(isShiprocketProvider)
+  // ---------------------------------------------------------
+  // 2. Prevent duplicate fulfillment
+  // ---------------------------------------------------------
+
+  if (order.fulfillments?.length) {
+    console.log(
+      `[Shiprocket] Order ${displayId} already has a fulfillment. Skipping.`
+    )
+    return
+  }
+
+  // ---------------------------------------------------------
+  // 3. Get shipping method
+  // ---------------------------------------------------------
+
+  const shippingMethods = order.shipping_methods ?? []
+
+  if (!shippingMethods.length) {
+    console.warn(`[Shiprocket] Order ${displayId} has no shipping method.`)
+    return
+  }
+
+  const shippingMethod = shippingMethods[0]
+
+  const shippingOptionId = shippingMethod?.shipping_option_id
+
+  console.log(`[Shiprocket] Shipping option ID: ${shippingOptionId}`)
+
+  if (!shippingOptionId) {
+    console.warn(`[Shiprocket] Order ${displayId} has no shipping_option_id.`)
+    return
+  }
+
+  // ---------------------------------------------------------
+  // 4. IMPORTANT:
+  //    Load shipping option separately.
+  //
+  //    The order query is only returning:
+  //    shipping_option_id
+  //
+  //    We need the actual provider_id.
+  // ---------------------------------------------------------
+
+  let shippingOption: any = null
+
+  try {
+    const shippingOptionResult = await query.graph({
+      entity: "shipping_option",
+      fields: ["id", "name", "provider_id"],
+      filters: {
+        id: shippingOptionId,
+      },
     })
 
-    if (!shiprocketShippingMethod) {
-      logger.info(
-        `[Shiprocket] Order ${
-          order.display_id ?? order.id
-        } is not using Shiprocket. Skipping automatic fulfillment.`
-      )
+    shippingOption = shippingOptionResult.data?.[0]
 
-      logger.info(
-        `[Shiprocket] Available shipping methods: ${JSON.stringify(
-          shippingMethods.map((method: any) => ({
-            id: method?.id,
-            name: method?.name,
-            shipping_option_id: method?.shipping_option_id,
-            provider_id: method?.provider_id,
-            shipping_option_provider_id: method?.shipping_option?.provider_id,
-          }))
-        )}`
-      )
-
-      return
-    }
-
-    const providerId =
-      shiprocketShippingMethod?.provider_id ??
-      shiprocketShippingMethod?.shipping_option?.provider_id
-
-    logger.info(
-      `[Shiprocket] Order ${
-        order.display_id ?? order.id
-      } is using Shiprocket provider: ${providerId}`
+    console.log(
+      `[Shiprocket] Shipping option resolved:`,
+      JSON.stringify(shippingOption, null, 2)
+    )
+  } catch (error: any) {
+    console.error(
+      `[Shiprocket] Failed to resolve shipping option ${shippingOptionId}:`,
+      error?.message || error
     )
 
-    /*
-     * Only send positive quantities to the fulfillment workflow.
-     */
-    const items = (order.items ?? [])
-      .map((item: any) => ({
-        id: item?.id,
-        quantity: Number(item?.quantity ?? 0),
-      }))
-      .filter(
-        (item: { id?: string; quantity: number }) =>
-          Boolean(item.id) && item.quantity > 0
-      )
+    console.error(error?.stack || error)
+    return
+  }
 
-    if (!items.length) {
-      logger.warn(
-        `[Shiprocket] Order ${
-          order.display_id ?? order.id
-        } has no fulfillable items after ${MAX_ATTEMPTS} attempts.`
-      )
-
-      logger.warn(
-        `[Shiprocket] Raw order items: ${JSON.stringify(order.items ?? [])}`
-      )
-
-      return
-    }
-
-    logger.info(
-      `[Shiprocket] Creating Medusa fulfillment for order ${
-        order.display_id ?? order.id
-      } with items: ${JSON.stringify(items)}`
+  if (!shippingOption) {
+    console.error(
+      `[Shiprocket] Shipping option ${shippingOptionId} could not be found.`
     )
+    return
+  }
+
+  const providerId = shippingOption.provider_id
+
+  console.log(`[Shiprocket] Shipping option provider: ${providerId}`)
+
+  // ---------------------------------------------------------
+  // 5. Verify Shiprocket provider
+  // ---------------------------------------------------------
+
+  if (!isShiprocketProvider(providerId)) {
+    console.log(`[Shiprocket] Order ${displayId} is not using Shiprocket.`)
+
+    console.log(`[Shiprocket] Provider detected: ${providerId}`)
+
+    return
+  }
+
+  console.log(
+    `[Shiprocket] Order ${displayId} IS using Shiprocket provider: ${providerId}`
+  )
+
+  // ---------------------------------------------------------
+  // 6. Prepare fulfillment items
+  // ---------------------------------------------------------
+
+  const items = (order.items ?? [])
+    .map((item: any) => ({
+      id: item?.id,
+      quantity: Number(item?.quantity ?? 0),
+    }))
+    .filter(
+      (item: { id?: string; quantity: number }) =>
+        Boolean(item.id) && item.quantity > 0
+    )
+
+  if (!items.length) {
+    console.warn(`[Shiprocket] Order ${displayId} has no fulfillable items.`)
+    return
+  }
+
+  console.log(`[Shiprocket] Fulfillment items: ${JSON.stringify(items)}`)
+
+  // ---------------------------------------------------------
+  // 7. Create Medusa fulfillment
+  // ---------------------------------------------------------
+
+  try {
+    console.log(`[Shiprocket] Creating fulfillment for order ${displayId}`)
 
     const { result } = await createOrderFulfillmentWorkflow(container).run({
       input: {
-        order_id: order.id,
+        order_id: orderId,
         items,
       },
     })
 
-    logger.info(
-      `[Shiprocket] Medusa fulfillment created successfully for order ${
-        order.display_id ?? order.id
-      }: ${JSON.stringify(result, null, 2)}`
-    )
-  } catch (error: any) {
-    logger.error(
-      `[Shiprocket] Automatic fulfillment failed for order ${orderId}: ${
-        error?.message || error
-      }`
+    console.log(
+      `[Shiprocket] Fulfillment created successfully for order ${displayId}`
     )
 
-    if (error?.stack) {
-      logger.error(error.stack)
-    }
+    console.log(
+      `[Shiprocket] Fulfillment result:`,
+      JSON.stringify(result, null, 2)
+    )
+  } catch (error: any) {
+    console.error(
+      `[Shiprocket] Fulfillment creation FAILED for order ${displayId}:`,
+      error?.message || error
+    )
+
+    console.error(error?.stack || error)
   }
 }
 

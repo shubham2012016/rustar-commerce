@@ -50,11 +50,8 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     this.autoSchedulePickup = options.autoSchedulePickup ?? false
 
     this.defaultWeightKg = options.defaultWeightKg ?? 0.5
-
     this.defaultLengthCm = options.defaultLengthCm ?? 20
-
     this.defaultBreadthCm = options.defaultBreadthCm ?? 15
-
     this.defaultHeightCm = options.defaultHeightCm ?? 10
   }
 
@@ -97,10 +94,6 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     cart: CalculateShippingOptionPriceDTO["cart"]
   ): Promise<CalculatedShippingOptionPrice> {
     // Rustar Chem currently offers FREE SHIPPING.
-    //
-    // IMPORTANT:
-    // Medusa expects calculated shipping prices to be returned
-    // as a CalculatedShippingOptionPrice object, not a raw number.
 
     return {
       calculated_amount: 0,
@@ -138,6 +131,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     const billingCustomerName =
       `${billingAddress.first_name ?? ""} ${billingAddress.last_name ?? ""}`.trim()
 
+    // ============================================================
+    // ORDER ITEMS
+    // ============================================================
+
     const orderItems = (items ?? []).map((item: any) => ({
       name: item.title ?? item.product_title ?? "Rustar Chem Product",
 
@@ -160,6 +157,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       0
     )
 
+    // ============================================================
+    // SHIPROCKET ORDER PAYLOAD
+    // ============================================================
+
     const payload = {
       order_id: order.display_id?.toString() ?? order.id,
 
@@ -167,9 +168,9 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
       pickup_location: (data?.pickup_location as string) ?? this.pickupLocation,
 
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
       // BILLING
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
 
       billing_customer_name:
         billingCustomerName || customerName || "Rustar Chem Customer",
@@ -195,9 +196,9 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
       billing_phone: billingAddress.phone ?? shippingAddress.phone ?? "",
 
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
       // SHIPPING
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
 
       shipping_is_billing: false,
 
@@ -225,9 +226,9 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
       shipping_phone: shippingAddress.phone ?? billingAddress.phone ?? "",
 
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
       // ITEMS
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
 
       order_items: orderItems,
 
@@ -239,9 +240,9 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
       total_discount: Number(data?.total_discount ?? 0),
 
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
       // PACKAGE
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
 
       weight: Number(data?.weight ?? this.defaultWeightKg),
 
@@ -256,6 +257,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       "[Shiprocket] Creating shipment:",
       JSON.stringify(payload, null, 2)
     )
+
+    // ============================================================
+    // CREATE SHIPROCKET ORDER
+    // ============================================================
 
     const createResponse = await this.client.createOrder(payload)
 
@@ -273,9 +278,13 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       )
     }
 
-    // ----------------------------------------------------------
+    console.log(
+      `[Shiprocket] Shiprocket order created. Shipment ID: ${shipmentId}`
+    )
+
+    // ============================================================
     // ASSIGN AWB
-    // ----------------------------------------------------------
+    // ============================================================
 
     const awbResponse = await this.client.assignAWB(shipmentId)
 
@@ -285,15 +294,39 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       (awbResponse as any)?.awb_code ??
       null
 
-    // ----------------------------------------------------------
+    const trackingNumber = awb ? String(awb) : null
+
+    const trackingUrl = trackingNumber
+      ? `https://www.shiprocket.co/tracking/${trackingNumber}`
+      : null
+
+    console.log(
+      "[Shiprocket] AWB assignment response:",
+      JSON.stringify(awbResponse, null, 2)
+    )
+
+    console.log(`[Shiprocket] AWB: ${trackingNumber ?? "Not assigned"}`)
+
+    // ============================================================
     // AUTO PICKUP
-    // ----------------------------------------------------------
+    // ============================================================
 
     let pickupResponse: unknown = null
 
     if (this.autoSchedulePickup) {
+      console.log(`[Shiprocket] Scheduling pickup for shipment ${shipmentId}`)
+
       pickupResponse = await this.client.schedulePickup(shipmentId)
+
+      console.log(
+        "[Shiprocket] Pickup response:",
+        JSON.stringify(pickupResponse, null, 2)
+      )
     }
+
+    // ============================================================
+    // RETURN MEDUSA FULFILLMENT DATA
+    // ============================================================
 
     return {
       data: {
@@ -304,7 +337,11 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
         shipment_id: shipmentId,
 
-        awb: awb,
+        awb: trackingNumber,
+
+        tracking_number: trackingNumber,
+
+        tracking_url: trackingUrl,
 
         create_order_response: createResponse,
 
@@ -316,6 +353,16 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
         auto_schedule_pickup: this.autoSchedulePickup,
       },
+
+      labels: trackingNumber
+        ? [
+            {
+              tracking_number: trackingNumber,
+
+              tracking_url: trackingUrl,
+            },
+          ]
+        : [],
     }
   }
 
@@ -377,6 +424,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
   async getShipmentDetails(shipmentId: number) {
     return this.client.getShipmentDetails(shipmentId)
+  }
+
+  async trackAWB(awb: string) {
+    return this.client.trackAWB(awb)
   }
 
   async cancelShipment(awb: string) {
