@@ -5,7 +5,7 @@ import type {
 
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-import ShiprocketModuleService from "../../../../../../../modules/shiprocket/service"
+import { ShiprocketClient } from "../../../../../../../modules/shiprocket/client"
 
 const STATUS_MAP: Record<number, string> = {
   1: "pending",
@@ -233,6 +233,25 @@ function getShiprocketOrderId(fulfillment: any): number | string | null {
   return value
 }
 
+function createShiprocketClient(): ShiprocketClient {
+  const email = process.env.SHIPROCKET_EMAIL
+
+  const password = process.env.SHIPROCKET_PASSWORD
+
+  if (!email) {
+    throw new Error("SHIPROCKET_EMAIL is not configured.")
+  }
+
+  if (!password) {
+    throw new Error("SHIPROCKET_PASSWORD is not configured.")
+  }
+
+  return new ShiprocketClient({
+    email,
+    password,
+  })
+}
+
 export async function GET(
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
@@ -241,12 +260,20 @@ export async function GET(
 
   const orderId = req.params.id
 
+  // ============================================================
+  // AUTHENTICATION
+  // ============================================================
+
   if (!customerId) {
     return res.status(401).json({
       success: false,
       message: "Customer authentication required.",
     })
   }
+
+  // ============================================================
+  // ORDER ID
+  // ============================================================
 
   if (!orderId) {
     return res.status(400).json({
@@ -257,6 +284,10 @@ export async function GET(
 
   try {
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+
+    // ==========================================================
+    // LOAD ORDER
+    // ==========================================================
 
     const { data } = await query.graph({
       entity: "order",
@@ -284,6 +315,10 @@ export async function GET(
       })
     }
 
+    // ==========================================================
+    // FIND SHIPROCKET FULFILLMENT
+    // ==========================================================
+
     const fulfillments = order.fulfillments ?? []
 
     const fulfillment = fulfillments.find((item: any) =>
@@ -303,13 +338,17 @@ export async function GET(
 
     const label = fulfillment.labels?.[0] ?? null
 
+    // ==========================================================
+    // EXTRACT SHIPMENT INFORMATION
+    // ==========================================================
+
     const awb = getStoredAwb(fulfillment)
 
     const shipmentId = getShipmentId(fulfillment)
 
     const shiprocketOrderId = getShiprocketOrderId(fulfillment)
 
-    console.log("[customer/order/tracking] Shipment data", {
+    console.log("[customer/order/tracking] Shipment data:", {
       orderId,
       fulfillmentId: fulfillment.id,
       shipmentId,
@@ -317,10 +356,10 @@ export async function GET(
       awb,
     })
 
-    /*
-     * The fulfillment exists but Shiprocket
-     * has not assigned an AWB yet.
-     */
+    // ==========================================================
+    // SHIPMENT EXISTS BUT AWB NOT ASSIGNED
+    // ==========================================================
+
     if (!awb) {
       return res.status(200).json({
         success: true,
@@ -357,34 +396,44 @@ export async function GET(
       })
     }
 
-    /*
-     * IMPORTANT:
-     *
-     * ShiprocketModuleService is registered by
-     * Medusa using its camel-cased service name:
-     *
-     * ShiprocketModuleService
-     *        ↓
-     * shiprocketModuleService
-     *
-     * The previous implementation attempted to
-     * resolve SHIPROCKET_MODULE, but that constant
-     * was undefined.
-     */
-    const shiprocketService = req.scope.resolve<ShiprocketModuleService>(
-      "shiprocketModuleService"
-    )
+    // ==========================================================
+    // IMPORTANT
+    //
+    // DO NOT DO THIS:
+    //
+    // req.scope.resolve("shiprocketModuleService")
+    //
+    // ShiprocketModuleService is a Medusa Fulfillment
+    // Provider service, not a globally resolvable
+    // application service.
+    //
+    // Use the existing ShiprocketClient directly here.
+    // ==========================================================
 
-    console.log("[customer/order/tracking] Fetching live Shiprocket tracking", {
+    const shiprocketClient = createShiprocketClient()
+
+    console.log("[customer/order/tracking] Authenticating with Shiprocket...")
+
+    await shiprocketClient.authenticate()
+
+    console.log("[customer/order/tracking] Fetching live tracking:", {
       awb,
     })
 
-    const trackingResponse = await shiprocketService.trackAWB(awb)
+    // ==========================================================
+    // FETCH LIVE TRACKING
+    // ==========================================================
+
+    const trackingResponse = await shiprocketClient.trackAWB(awb)
 
     console.log(
       "[customer/order/tracking] Shiprocket tracking response:",
       JSON.stringify(trackingResponse, null, 2)
     )
+
+    // ==========================================================
+    // NORMALIZE RESPONSE
+    // ==========================================================
 
     const liveTracking = extractTrackingData(trackingResponse)
 
@@ -396,6 +445,10 @@ export async function GET(
       (finalAwb
         ? `https://www.shiprocket.co/tracking/${encodeURIComponent(finalAwb)}`
         : null)
+
+    // ==========================================================
+    // RETURN FRONTEND CONTRACT
+    // ==========================================================
 
     return res.status(200).json({
       success: true,
