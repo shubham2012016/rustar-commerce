@@ -9,19 +9,44 @@ type ShiprocketAuthResponse = {
   token: string
 }
 
+type ShiprocketCreateOrderResponse = Record<string, any>
+
+type ShiprocketAWBResponse = Record<string, any>
+
+type ShiprocketLabelResponse = Record<string, any>
+
+type ShiprocketPickupResponse = Record<string, any>
+
+type ShiprocketTrackingResponse = Record<string, any>
+
 export class ShiprocketClient {
   private email: string
+
   private password: string
+
   private token?: string
 
   constructor(credentials: ShiprocketCredentials) {
     this.email = credentials.email
+
     this.password = credentials.password
   }
 
-  async trackAWB(awb: string) {
-    return this.request(`/courier/track/awb/${encodeURIComponent(awb)}`)
+  // ============================================================
+  // TRACKING
+  // ============================================================
+
+  async trackAWB(awb: string): Promise<ShiprocketTrackingResponse> {
+    await this.ensureAuthenticated()
+
+    return this.request<ShiprocketTrackingResponse>(
+      `/courier/track/awb/${encodeURIComponent(awb)}`
+    )
   }
+
+  // ============================================================
+  // HTTP REQUEST
+  // ============================================================
 
   private async request<T>(
     endpoint: string,
@@ -32,6 +57,8 @@ export class ShiprocketClient {
 
       headers: {
         "Content-Type": "application/json",
+
+        Accept: "application/json",
 
         ...(this.token
           ? {
@@ -62,15 +89,26 @@ export class ShiprocketClient {
     return data as T
   }
 
+  // ============================================================
+  // AUTHENTICATION
+  // ============================================================
+
   async authenticate(): Promise<string> {
     const response = await this.request<ShiprocketAuthResponse>("/auth/login", {
       method: "POST",
 
       body: JSON.stringify({
         email: this.email,
+
         password: this.password,
       }),
     })
+
+    if (!response?.token) {
+      throw new Error(
+        "Shiprocket authentication succeeded but no token was returned."
+      )
+    }
 
     this.token = response.token
 
@@ -83,20 +121,33 @@ export class ShiprocketClient {
     }
   }
 
-  async createOrder(payload: Record<string, unknown>) {
+  // ============================================================
+  // CREATE ORDER
+  // ============================================================
+
+  async createOrder(
+    payload: Record<string, unknown>
+  ): Promise<ShiprocketCreateOrderResponse> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>("/orders/create/adhoc", {
+    return this.request<ShiprocketCreateOrderResponse>("/orders/create/adhoc", {
       method: "POST",
 
       body: JSON.stringify(payload),
     })
   }
 
-  async assignAWB(shipmentId: number, courierId?: number) {
+  // ============================================================
+  // ASSIGN AWB
+  // ============================================================
+
+  async assignAWB(
+    shipmentId: number,
+    courierId?: number
+  ): Promise<ShiprocketAWBResponse> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>("/courier/assign/awb", {
+    return this.request<ShiprocketAWBResponse>("/courier/assign/awb", {
       method: "POST",
 
       body: JSON.stringify({
@@ -111,10 +162,14 @@ export class ShiprocketClient {
     })
   }
 
-  async schedulePickup(shipmentId: number) {
+  // ============================================================
+  // SCHEDULE PICKUP
+  // ============================================================
+
+  async schedulePickup(shipmentId: number): Promise<ShiprocketPickupResponse> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>("/courier/generate/pickup", {
+    return this.request<ShiprocketPickupResponse>("/courier/generate/pickup", {
       method: "POST",
 
       body: JSON.stringify({
@@ -123,10 +178,14 @@ export class ShiprocketClient {
     })
   }
 
-  async generateLabel(shipmentId: number) {
+  // ============================================================
+  // GENERATE SHIPPING LABEL
+  // ============================================================
+
+  async generateLabel(shipmentId: number): Promise<ShiprocketLabelResponse> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>("/courier/generate/label", {
+    return this.request<ShiprocketLabelResponse>("/courier/generate/label", {
       method: "POST",
 
       body: JSON.stringify({
@@ -135,18 +194,26 @@ export class ShiprocketClient {
     })
   }
 
-  async getShipmentDetails(shipmentId: number) {
+  // ============================================================
+  // SHIPMENT DETAILS
+  // ============================================================
+
+  async getShipmentDetails(shipmentId: number): Promise<Record<string, any>> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>(`/shipments/${shipmentId}`, {
+    return this.request<Record<string, any>>(`/shipments/${shipmentId}`, {
       method: "GET",
     })
   }
 
-  async cancelShipment(awb: string) {
+  // ============================================================
+  // CANCEL SHIPMENT
+  // ============================================================
+
+  async cancelShipment(awb: string): Promise<Record<string, any>> {
     await this.ensureAuthenticated()
 
-    return this.request<unknown>("/orders/cancel/shipment/awbs", {
+    return this.request<Record<string, any>>("/orders/cancel/shipment/awbs", {
       method: "POST",
 
       body: JSON.stringify({

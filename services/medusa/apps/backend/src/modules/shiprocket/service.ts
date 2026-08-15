@@ -23,6 +23,74 @@ export type ShiprocketModuleOptions = {
   defaultHeightCm?: number
 }
 
+function extractShiprocketValue(response: any, paths: string[][]): unknown {
+  for (const path of paths) {
+    let current = response
+
+    for (const key of path) {
+      current = current?.[key]
+    }
+
+    if (current !== undefined && current !== null && current !== "") {
+      return current
+    }
+  }
+
+  return null
+}
+
+function extractShipmentId(response: any): number | null {
+  const value = extractShiprocketValue(response, [
+    ["shipment_id"],
+    ["data", "shipment_id"],
+    ["response", "data", "shipment_id"],
+  ])
+
+  const shipmentId = Number(value)
+
+  return Number.isFinite(shipmentId) && shipmentId > 0 ? shipmentId : null
+}
+
+function extractShiprocketOrderId(response: any): string | null {
+  const value = extractShiprocketValue(response, [
+    ["order_id"],
+    ["data", "order_id"],
+    ["response", "data", "order_id"],
+  ])
+
+  return value !== null ? String(value) : null
+}
+
+function extractAwb(response: any): string | null {
+  const value = extractShiprocketValue(response, [
+    ["awb_code"],
+    ["data", "awb_code"],
+    ["response", "data", "awb_code"],
+  ])
+
+  return value !== null ? String(value) : null
+}
+
+function extractCourierName(response: any): string | null {
+  const value = extractShiprocketValue(response, [
+    ["courier_name"],
+    ["data", "courier_name"],
+    ["response", "data", "courier_name"],
+  ])
+
+  return value !== null ? String(value) : null
+}
+
+function extractLabelUrl(response: any): string | null {
+  const value = extractShiprocketValue(response, [
+    ["label_url"],
+    ["data", "label_url"],
+    ["response", "data", "label_url"],
+  ])
+
+  return value !== null ? String(value) : null
+}
+
 class ShiprocketModuleService extends AbstractFulfillmentProviderService {
   static identifier = "shiprocket"
 
@@ -50,9 +118,16 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     this.autoSchedulePickup = options.autoSchedulePickup ?? false
 
     this.defaultWeightKg = options.defaultWeightKg ?? 0.5
+
     this.defaultLengthCm = options.defaultLengthCm ?? 20
+
     this.defaultBreadthCm = options.defaultBreadthCm ?? 15
+
     this.defaultHeightCm = options.defaultHeightCm ?? 10
+
+    logger?.info?.(
+      `[Shiprocket] Provider initialized. Pickup location: ${this.pickupLocation}`
+    )
   }
 
   // ============================================================
@@ -131,25 +206,122 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     const billingCustomerName =
       `${billingAddress.first_name ?? ""} ${billingAddress.last_name ?? ""}`.trim()
 
+    const displayOrderId = order.display_id?.toString() ?? order.id
+
+    console.log(
+      `[Shiprocket] ==================================================`
+    )
+
+    console.log(
+      `[Shiprocket] Creating fulfillment for Medusa order ${displayOrderId}`
+    )
+
+    console.log(
+      `[Shiprocket] Fulfillment items received:`,
+      JSON.stringify(items, null, 2)
+    )
+
+    console.log(
+      `[Shiprocket] Order items available:`,
+      JSON.stringify(
+        (order.items ?? []).map((item: any) => ({
+          id: item?.id,
+          title: item?.title,
+          quantity: item?.quantity,
+          unit_price: item?.unit_price,
+          original_unit_price: item?.original_unit_price,
+          variant_id: item?.variant_id,
+          sku: item?.variant_sku ?? item?.sku ?? item?.variant?.sku,
+        })),
+        null,
+        2
+      )
+    )
+
     // ============================================================
     // ORDER ITEMS
+    //
+    // IMPORTANT:
+    // The fulfillment workflow can pass only:
+    //
+    //   { id, quantity }
+    //
+    // Therefore we resolve the authoritative price from
+    // order.items using the item ID.
     // ============================================================
 
-    const orderItems = (items ?? []).map((item: any) => ({
-      name: item.title ?? item.product_title ?? "Rustar Chem Product",
+    const orderItems = (items ?? [])
+      .map((fulfillmentItem: any) => {
+        const orderItem =
+          (order.items ?? []).find(
+            (item: any) => item?.id === fulfillmentItem?.line_item_id
+          ) ?? fulfillmentItem
 
-      sku: item.variant_sku ?? item.sku ?? item.variant_id ?? `ITEM-${item.id}`,
+        const quantity = Number(
+          fulfillmentItem?.quantity ?? orderItem?.quantity ?? 0
+        )
 
-      units: Number(item.quantity ?? 1),
+        if (!orderItem?.id || quantity <= 0) {
+          return null
+        }
 
-      selling_price: Number(item.unit_price ?? 0),
+        const unitPrice =
+          Number(orderItem?.unit_price) ||
+          Number(orderItem?.original_unit_price) ||
+          Number(orderItem?.raw_unit_price) ||
+          Number(orderItem?.price) ||
+          0
 
-      discount: 0,
+        const title =
+          orderItem?.title ??
+          orderItem?.product_title ??
+          orderItem?.variant?.product?.title ??
+          "Rustar Chem Product"
 
-      tax: 0,
+        const sku =
+          orderItem?.variant_sku ??
+          orderItem?.sku ??
+          orderItem?.variant?.sku ??
+          orderItem?.variant_id ??
+          `ITEM-${orderItem.id}`
 
-      hsn: item.metadata?.hsn ?? "",
-    }))
+        console.log(
+          `[Shiprocket] Item mapping: fulfillment_item=${fulfillmentItem?.id}, line_item=${fulfillmentItem?.line_item_id}, order_item=${orderItem?.id}, price=${unitPrice}, quantity=${quantity}, sku=${sku}`
+        )
+
+        return {
+          name: title,
+
+          sku,
+
+          units: quantity,
+
+          selling_price: unitPrice,
+
+          discount: Number(orderItem?.discount_total ?? 0),
+
+          tax: Number(orderItem?.tax_total ?? 0),
+
+          hsn: orderItem?.metadata?.hsn ?? orderItem?.hsn ?? "",
+        }
+      })
+      .filter(Boolean)
+
+    // ============================================================
+    // VALIDATE PRICES
+    // ============================================================
+
+    const invalidPriceItem = orderItems.find(
+      (item: any) =>
+        !Number.isFinite(Number(item.selling_price)) ||
+        Number(item.selling_price) < 0
+    )
+
+    if (invalidPriceItem) {
+      throw new Error(
+        `Invalid selling price detected for Shiprocket order ${displayOrderId}.`
+      )
+    }
 
     const subTotal = orderItems.reduce(
       (total: number, item: any) =>
@@ -157,12 +329,14 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       0
     )
 
+    console.log(`[Shiprocket] Calculated subtotal: ₹${subTotal}`)
+
     // ============================================================
     // SHIPROCKET ORDER PAYLOAD
     // ============================================================
 
     const payload = {
-      order_id: order.display_id?.toString() ?? order.id,
+      order_id: displayOrderId,
 
       order_date: new Date().toISOString().slice(0, 19).replace("T", " "),
 
@@ -232,8 +406,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
       order_items: orderItems,
 
-      // Razorpay-completed orders are prepaid.
-      // Can be overridden later for COD.
+      // ----------------------------------------------------------
+      // PAYMENT
+      // ----------------------------------------------------------
+
       payment_method: (data?.payment_method as string) ?? "PREPAID",
 
       sub_total: subTotal,
@@ -244,17 +420,17 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       // PACKAGE
       // ----------------------------------------------------------
 
-      weight: Number(data?.weight ?? this.defaultWeightKg),
+      weight: Number(data?.weight) || this.defaultWeightKg,
 
-      length: Number(data?.length ?? this.defaultLengthCm),
+      length: Number(data?.length) || this.defaultLengthCm,
 
-      breadth: Number(data?.breadth ?? this.defaultBreadthCm),
+      breadth: Number(data?.breadth) || this.defaultBreadthCm,
 
-      height: Number(data?.height ?? this.defaultHeightCm),
+      height: Number(data?.height) || this.defaultHeightCm,
     }
 
     console.log(
-      "[Shiprocket] Creating shipment:",
+      "[Shiprocket] Final create-order payload:",
       JSON.stringify(payload, null, 2)
     )
 
@@ -264,11 +440,12 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
     const createResponse = await this.client.createOrder(payload)
 
-    const responseData = createResponse as any
-
-    const shipmentId = Number(
-      responseData?.shipment_id ?? responseData?.data?.shipment_id
+    console.log(
+      "[Shiprocket] Create order response:",
+      JSON.stringify(createResponse, null, 2)
     )
+
+    const shipmentId = extractShipmentId(createResponse)
 
     if (!shipmentId) {
       throw new Error(
@@ -278,8 +455,10 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
       )
     }
 
+    const shiprocketOrderId = extractShiprocketOrderId(createResponse)
+
     console.log(
-      `[Shiprocket] Shiprocket order created. Shipment ID: ${shipmentId}`
+      `[Shiprocket] Shiprocket order created. order_id=${shiprocketOrderId ?? "unknown"}, shipment_id=${shipmentId}`
     )
 
     // ============================================================
@@ -288,24 +467,57 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
 
     const awbResponse = await this.client.assignAWB(shipmentId)
 
-    const awb =
-      (awbResponse as any)?.response?.data?.awb_code ??
-      (awbResponse as any)?.data?.awb_code ??
-      (awbResponse as any)?.awb_code ??
-      null
-
-    const trackingNumber = awb ? String(awb) : null
-
-    const trackingUrl = trackingNumber
-      ? `https://www.shiprocket.co/tracking/${trackingNumber}`
-      : null
-
     console.log(
       "[Shiprocket] AWB assignment response:",
       JSON.stringify(awbResponse, null, 2)
     )
 
-    console.log(`[Shiprocket] AWB: ${trackingNumber ?? "Not assigned"}`)
+    const trackingNumber = extractAwb(awbResponse)
+
+    if (!trackingNumber) {
+      throw new Error(
+        `Shiprocket shipment ${shipmentId} was created but AWB assignment did not return an AWB. Response: ${JSON.stringify(
+          awbResponse
+        )}`
+      )
+    }
+
+    const courierName = extractCourierName(awbResponse)
+
+    const trackingUrl = `https://www.shiprocket.co/tracking/${encodeURIComponent(
+      trackingNumber
+    )}`
+
+    console.log(`[Shiprocket] AWB assigned: ${trackingNumber}`)
+
+    console.log(`[Shiprocket] Courier: ${courierName ?? "Unknown"}`)
+
+    // ============================================================
+    // GENERATE LABEL
+    //
+    // Shiprocket requires AWB assignment before label generation.
+    // ============================================================
+
+    console.log(`[Shiprocket] Generating label for shipment ${shipmentId}`)
+
+    const labelResponse = await this.client.generateLabel(shipmentId)
+
+    console.log(
+      "[Shiprocket] Label generation response:",
+      JSON.stringify(labelResponse, null, 2)
+    )
+
+    const labelUrl = extractLabelUrl(labelResponse)
+
+    if (!labelUrl) {
+      throw new Error(
+        `Shiprocket label generation completed without returning label_url for shipment ${shipmentId}. Response: ${JSON.stringify(
+          labelResponse
+        )}`
+      )
+    }
+
+    console.log(`[Shiprocket] Label URL generated successfully: ${labelUrl}`)
 
     // ============================================================
     // AUTO PICKUP
@@ -328,41 +540,53 @@ class ShiprocketModuleService extends AbstractFulfillmentProviderService {
     // RETURN MEDUSA FULFILLMENT DATA
     // ============================================================
 
+    const fulfillmentData = {
+      provider: "shiprocket",
+
+      shiprocket_order_id: shiprocketOrderId,
+
+      shipment_id: shipmentId,
+
+      awb: trackingNumber,
+
+      tracking_number: trackingNumber,
+
+      tracking_url: trackingUrl,
+
+      label_url: labelUrl,
+
+      courier_name: courierName,
+
+      create_order_response: createResponse,
+
+      awb_response: awbResponse,
+
+      label_response: labelResponse,
+
+      pickup_response: pickupResponse,
+
+      pickup_location: this.pickupLocation,
+
+      auto_schedule_pickup: this.autoSchedulePickup,
+    }
+
+    console.log(
+      "[Shiprocket] Final Medusa fulfillment data:",
+      JSON.stringify(fulfillmentData, null, 2)
+    )
+
     return {
-      data: {
-        provider: "shiprocket",
+      data: fulfillmentData,
 
-        shiprocket_order_id:
-          responseData?.order_id ?? responseData?.data?.order_id ?? null,
+      labels: [
+        {
+          tracking_number: trackingNumber,
 
-        shipment_id: shipmentId,
+          tracking_url: trackingUrl,
 
-        awb: trackingNumber,
-
-        tracking_number: trackingNumber,
-
-        tracking_url: trackingUrl,
-
-        create_order_response: createResponse,
-
-        awb_response: awbResponse,
-
-        pickup_response: pickupResponse,
-
-        pickup_location: this.pickupLocation,
-
-        auto_schedule_pickup: this.autoSchedulePickup,
-      },
-
-      labels: trackingNumber
-        ? [
-            {
-              tracking_number: trackingNumber,
-
-              tracking_url: trackingUrl,
-            },
-          ]
-        : [],
+          label_url: labelUrl,
+        },
+      ],
     }
   }
 
