@@ -5,8 +5,6 @@ import type {
 
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-import { SHIPROCKET_MODULE } from "../../../../../../../modules/shiprocket"
-
 import ShiprocketModuleService from "../../../../../../../modules/shiprocket/service"
 
 const STATUS_MAP: Record<number, string> = {
@@ -21,6 +19,7 @@ const STATUS_MAP: Record<number, string> = {
   8: "cancelled",
   9: "rto_initiated",
   10: "rto_delivered",
+
   12: "lost",
   13: "pickup_error",
   14: "rto_acknowledged",
@@ -37,6 +36,7 @@ const STATUS_MAP: Record<number, string> = {
   25: "damaged",
   26: "fulfilled",
   27: "pickup_booked",
+
   38: "reached_destination_hub",
   39: "misrouted",
   40: "rto_ndr",
@@ -56,15 +56,19 @@ const STATUS_MAP: Record<number, string> = {
   55: "connection_aligned",
   56: "reached_overseas_warehouse",
   57: "custom_cleared_overseas",
+
   59: "box_packing",
   60: "fc_allocated",
   61: "picklist_generated",
   62: "ready_to_pack",
   63: "packed",
+
   67: "fc_manifest_generated",
   68: "processed_at_warehouse",
+
   71: "handover_exception",
   72: "packed_exception",
+
   75: "rto_lock",
   76: "untraceable",
   77: "issue_related_to_recipient",
@@ -86,7 +90,7 @@ function normalizeStatus(statusCode: unknown, statusText?: unknown): string {
 }
 
 function extractTrackingData(response: any) {
-  const root = response?.data ?? response
+  const root = response?.data ?? response ?? {}
 
   const trackingData = root?.tracking_data ?? response?.tracking_data ?? {}
 
@@ -97,7 +101,7 @@ function extractTrackingData(response: any) {
     root?.shipment_track ??
     null
 
-  const shipmentTrackActivities =
+  const rawActivities =
     trackingData?.shipment_track_activities ??
     root?.shipment_track_activities ??
     []
@@ -112,6 +116,7 @@ function extractTrackingData(response: any) {
     shipmentTrack?.current_status ??
     shipmentTrack?.status ??
     trackingData?.shipment_status ??
+    trackingData?.shipment_status_name ??
     root?.current_status ??
     root?.status ??
     null
@@ -122,15 +127,39 @@ function extractTrackingData(response: any) {
   const courierName =
     shipmentTrack?.courier_name ??
     trackingData?.courier_name ??
+    trackingData?.courier ??
     root?.courier_name ??
+    root?.courier ??
     null
 
-  const etd =
+  const estimatedDeliveryDate =
     shipmentTrack?.edd ??
     shipmentTrack?.etd ??
     trackingData?.edd ??
     trackingData?.etd ??
     null
+
+  const activities = Array.isArray(rawActivities)
+    ? rawActivities.map((activity: any) => ({
+        id: activity?.id ?? null,
+
+        date:
+          activity?.date ??
+          activity?.activity_date ??
+          activity?.created_at ??
+          null,
+
+        status: activity?.status ?? activity?.current_status ?? null,
+
+        activity:
+          activity?.activity ??
+          activity?.description ??
+          activity?.status ??
+          "Shipment update",
+
+        location: activity?.location ?? activity?.location_name ?? null,
+      }))
+    : []
 
   return {
     awb: awb ? String(awb) : null,
@@ -148,20 +177,60 @@ function extractTrackingData(response: any) {
 
     statusText: typeof statusText === "string" ? statusText : null,
 
-    estimatedDeliveryDate: etd ?? null,
+    estimatedDeliveryDate: estimatedDeliveryDate ?? null,
 
-    activities: Array.isArray(shipmentTrackActivities)
-      ? shipmentTrackActivities.map((activity: any) => ({
-          date: activity?.date ?? null,
-
-          status: activity?.status ?? null,
-
-          activity: activity?.activity ?? null,
-
-          location: activity?.location ?? null,
-        }))
-      : [],
+    activities,
   }
+}
+
+function getStoredAwb(fulfillment: any): string | null {
+  const data = fulfillment?.data ?? {}
+
+  const label = fulfillment?.labels?.[0] ?? null
+
+  const awb =
+    label?.tracking_number ??
+    data?.awb ??
+    data?.tracking_number ??
+    data?.awb_code ??
+    data?.awb_response?.awb_code ??
+    data?.awb_response?.data?.awb_code ??
+    null
+
+  return awb ? String(awb) : null
+}
+
+function getShipmentId(fulfillment: any): number | string | null {
+  const data = fulfillment?.data ?? {}
+
+  const value =
+    data?.shipment_id ??
+    data?.shipmentId ??
+    data?.shipment_details?.shipment_id ??
+    null
+
+  if (value === null || value === undefined || value === "") {
+    return null
+  }
+
+  return value
+}
+
+function getShiprocketOrderId(fulfillment: any): number | string | null {
+  const data = fulfillment?.data ?? {}
+
+  const value =
+    data?.shiprocket_order_id ??
+    data?.shiprocketOrderId ??
+    data?.create_order_response?.order_id ??
+    data?.create_order_response?.response?.data?.order_id ??
+    null
+
+  if (value === null || value === undefined || value === "") {
+    return null
+  }
+
+  return value
 }
 
 export async function GET(
@@ -234,33 +303,25 @@ export async function GET(
 
     const label = fulfillment.labels?.[0] ?? null
 
-    const storedAwb =
-      label?.tracking_number ??
-      fulfillmentData.awb ??
-      fulfillmentData.tracking_number ??
-      null
+    const awb = getStoredAwb(fulfillment)
 
-    const shipmentId =
-      fulfillmentData.shipment_id ?? fulfillmentData.shipmentId ?? null
+    const shipmentId = getShipmentId(fulfillment)
 
-    const shiprocketOrderId =
-      fulfillmentData.shiprocket_order_id ??
-      fulfillmentData.shiprocketOrderId ??
-      null
+    const shiprocketOrderId = getShiprocketOrderId(fulfillment)
 
     console.log("[customer/order/tracking] Shipment data", {
       orderId,
       fulfillmentId: fulfillment.id,
       shipmentId,
       shiprocketOrderId,
-      awb: storedAwb,
+      awb,
     })
 
     /*
-     * Shipment exists, but Shiprocket has
-     * not assigned an AWB yet.
+     * The fulfillment exists but Shiprocket
+     * has not assigned an AWB yet.
      */
-    if (!storedAwb) {
+    if (!awb) {
       return res.status(200).json({
         success: true,
 
@@ -297,16 +358,28 @@ export async function GET(
     }
 
     /*
-     * Resolve the Shiprocket module service.
+     * IMPORTANT:
+     *
+     * ShiprocketModuleService is registered by
+     * Medusa using its camel-cased service name:
+     *
+     * ShiprocketModuleService
+     *        ↓
+     * shiprocketModuleService
+     *
+     * The previous implementation attempted to
+     * resolve SHIPROCKET_MODULE, but that constant
+     * was undefined.
      */
-    const shiprocketService =
-      req.scope.resolve<ShiprocketModuleService>(SHIPROCKET_MODULE)
+    const shiprocketService = req.scope.resolve<ShiprocketModuleService>(
+      "shiprocketModuleService"
+    )
 
-    /*
-     * Fetch live tracking information
-     * directly from Shiprocket.
-     */
-    const trackingResponse = await shiprocketService.trackAWB(String(storedAwb))
+    console.log("[customer/order/tracking] Fetching live Shiprocket tracking", {
+      awb,
+    })
+
+    const trackingResponse = await shiprocketService.trackAWB(awb)
 
     console.log(
       "[customer/order/tracking] Shiprocket tracking response:",
@@ -315,13 +388,13 @@ export async function GET(
 
     const liveTracking = extractTrackingData(trackingResponse)
 
-    const awb = liveTracking.awb ?? String(storedAwb)
+    const finalAwb = liveTracking.awb ?? awb
 
-    const trackingUrl =
+    const finalTrackingUrl =
       label?.tracking_url ??
       fulfillmentData.tracking_url ??
-      (awb
-        ? `https://www.shiprocket.co/tracking/${encodeURIComponent(awb)}`
+      (finalAwb
+        ? `https://www.shiprocket.co/tracking/${encodeURIComponent(finalAwb)}`
         : null)
 
     return res.status(200).json({
@@ -338,13 +411,14 @@ export async function GET(
 
         shiprocketOrderId,
 
-        awb,
+        awb: finalAwb,
 
-        trackingNumber: awb,
+        trackingNumber: finalAwb,
 
-        trackingUrl,
+        trackingUrl: finalTrackingUrl,
 
-        courierName: liveTracking.courierName,
+        courierName:
+          liveTracking.courierName ?? fulfillmentData.courier_name ?? null,
 
         status: liveTracking.status,
 
