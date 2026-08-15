@@ -22,15 +22,6 @@ function mapCartItems(
   return cart.items.map((item) => {
     const lineItem = item as Record<string, unknown>
 
-    console.log("================================")
-    console.log("MEDUSA LINE ITEM")
-    console.log(lineItem)
-    console.log("thumbnail:", lineItem.thumbnail)
-    console.log("metadata:", lineItem.metadata)
-    console.log("variant:", lineItem.variant)
-    console.log("PRODUCT OBJECT", JSON.stringify(lineItem.product, null, 2))
-    console.log("================================")
-
     const inventoryQuantity = lineItem.inventory_quantity as number | undefined
 
     return {
@@ -76,8 +67,6 @@ export const useCartStore = create<CartState>()(
       createCartIfNeeded: async () => {
         const state = get()
 
-        console.log("[cart] createCartIfNeeded start", { cartId: state.cartId })
-
         if (state.cartId) {
           return
         }
@@ -85,12 +74,8 @@ export const useCartStore = create<CartState>()(
         set({ loading: true, error: null })
 
         try {
-          console.log(
-            "[cart] createCartIfNeeded resolving region and creating cart"
-          )
           const cart = await createCart()
           set({ cartId: cart.id, items: mapCartItems(cart), loading: false })
-          console.log("[cart] createCartIfNeeded created", { cartId: cart.id })
         } catch (error) {
           set({
             loading: false,
@@ -103,10 +88,6 @@ export const useCartStore = create<CartState>()(
       retrieveCart: async () => {
         const state = get()
 
-        console.log("[cart] retrieveCart start", {
-          cartId: state.cartId,
-        })
-
         if (!state.cartId) {
           return
         }
@@ -114,23 +95,11 @@ export const useCartStore = create<CartState>()(
         set({ loading: true, error: null })
 
         try {
-          console.log("[cart] retrieveCart calling retrieveCart", {
-            cartId: state.cartId,
-          })
-
           const cart = await retrieveCart(state.cartId)
 
           // A completed Medusa cart is permanently closed.
           // Never keep it as the active storefront cart.
           if ((cart as any)?.completed_at) {
-            console.log(
-              "[cart] completed cart detected, resetting local cart",
-              {
-                cartId: state.cartId,
-                completedAt: (cart as any).completed_at,
-              }
-            )
-
             set({
               cartId: null,
               items: [],
@@ -145,24 +114,12 @@ export const useCartStore = create<CartState>()(
             items: mapCartItems(cart),
             loading: false,
           })
-
-          console.log("[cart] retrieveCart finished", {
-            cartId: state.cartId,
-            itemsCount: (cart?.items as unknown[] | undefined)?.length ?? 0,
-          })
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
 
           // Medusa can reject operations on an already completed cart.
           // Treat that cart as invalid and start fresh.
           if (/already completed/i.test(message)) {
-            console.log(
-              "[cart] completed cart rejected by Medusa, resetting local cart",
-              {
-                cartId: state.cartId,
-              }
-            )
-
             set({
               cartId: null,
               items: [],
@@ -185,25 +142,16 @@ export const useCartStore = create<CartState>()(
       addItem: async (item) => {
         const state = get()
 
-        console.log("[cart] addItem start", { item, cartId: state.cartId })
-
         set({ loading: true, error: null })
 
         try {
           if (!get().cartId) {
-            console.log("[cart] addItem no cartId found, creating cart")
             await get().createCartIfNeeded()
           }
 
           let cart
 
           try {
-            console.log("[cart] addItem about to call addLineItem", {
-              cartId: get().cartId,
-              variantId: item.variantId,
-              quantity: item.quantity,
-            })
-
             cart = await addLineItem(
               get().cartId ?? "",
               item.variantId,
@@ -216,10 +164,6 @@ export const useCartStore = create<CartState>()(
             // The old persisted cart has been completed by Medusa.
             // Discard it and retry once using a fresh cart.
             if (/already completed/i.test(message)) {
-              console.log(
-                "[cart] active cart is completed, creating a fresh cart"
-              )
-
               set({
                 cartId: null,
                 items: [],
@@ -276,13 +220,12 @@ export const useCartStore = create<CartState>()(
           }
 
           set({ cartId: cart.id, items: mappedItems, loading: false })
-          console.log("[cart] addItem succeeded", { cartId: cart.id })
         } catch (error) {
           set({
             loading: false,
             error: (error as Error).message ?? "Failed to add item to cart.",
           })
-          console.log("[cart] addItem failed", { error })
+
           throw error
         }
       },
@@ -293,38 +236,22 @@ export const useCartStore = create<CartState>()(
           (item) => item.id === id && item.variantId === variantId
         )?.lineItemId
 
-        console.log("[cart] removeItem start", {
-          id,
-          variantId,
-          cartId: state.cartId,
-          lineItemId,
-        })
-
         if (!state.cartId || !lineItemId) {
-          console.log(
-            "[cart] removeItem missing cartId or lineItemId, aborting",
-            { cartId: state.cartId, lineItemId }
-          )
           return
         }
 
         set({ loading: true, error: null })
 
         try {
-          console.log("[cart] removeItem calling removeLineItem", {
-            cartId: state.cartId,
-            lineItemId,
-          })
           const cart = await removeLineItem(state.cartId, lineItemId)
           set({ items: mapCartItems(cart), loading: false })
-          console.log("[cart] removeItem succeeded", { cartId: state.cartId })
         } catch (error) {
           set({
             loading: false,
             error:
               (error as Error).message ?? "Failed to remove item from cart.",
           })
-          console.log("[cart] removeItem failed", { error })
+
           throw error
         }
       },
@@ -335,35 +262,15 @@ export const useCartStore = create<CartState>()(
           (item) => item.id === id && item.variantId === variantId
         )?.lineItemId
 
-        console.log("[cart] updateQuantity start", {
-          id,
-          variantId,
-          quantity,
-          cartId: state.cartId,
-          lineItemId,
-        })
-
         if (!state.cartId || !lineItemId) {
-          console.log(
-            "[cart] updateQuantity missing cartId or lineItemId, aborting",
-            { cartId: state.cartId, lineItemId }
-          )
           return
         }
 
         set({ loading: true, error: null })
 
         try {
-          console.log("[cart] updateQuantity calling updateLineItem", {
-            cartId: state.cartId,
-            lineItemId,
-            quantity,
-          })
           const cart = await updateLineItem(state.cartId, lineItemId, quantity)
           set({ items: mapCartItems(cart), loading: false })
-          console.log("[cart] updateQuantity succeeded", {
-            cartId: state.cartId,
-          })
         } catch (error) {
           set({
             loading: false,
@@ -371,7 +278,7 @@ export const useCartStore = create<CartState>()(
               (error as Error).message ??
               "Failed to update cart item quantity.",
           })
-          console.log("[cart] updateQuantity failed", { error })
+
           throw error
         }
       },
