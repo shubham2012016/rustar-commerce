@@ -1,28 +1,46 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { useEffect } from "react"
-
-import { heroSlides } from "./hero.data"
+import type { HttpTypes } from "@medusajs/types"
 
 interface HeroSliderProps {
+  products: HttpTypes.StoreProduct[]
   activeIndex: number
   setActiveIndex: React.Dispatch<React.SetStateAction<number>>
 }
 
 export default function HeroSlider({
+  products,
   activeIndex,
   setActiveIndex,
 }: HeroSliderProps) {
-  const slide = heroSlides[activeIndex]
+  const heroProducts = products.filter(
+    (product) =>
+      Boolean(product.variants?.[0]) &&
+      Boolean(product.thumbnail ?? product.images?.[0]?.url)
+  )
+
+  const slide = heroProducts[activeIndex]
 
   useEffect(() => {
+    if (heroProducts.length <= 1) return
+
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % heroSlides.length)
+      setActiveIndex((prev) => (prev + 1) % heroProducts.length)
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [setActiveIndex])
+  }, [heroProducts.length, setActiveIndex])
+
+  if (!slide) {
+    return null
+  }
+
+  const image = slide.thumbnail ?? slide.images?.[0]?.url ?? ""
+
+  const productHref = `/products/${slide.handle}`
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 via-white to-slate-100 p-14">
@@ -31,31 +49,28 @@ export default function HeroSlider({
 
       <div
         key={slide.id}
-        className="grid animate-in grid-cols-2 items-center gap-8 fade-in duration-500"
+        className="animate-in fade-in grid grid-cols-2 items-center gap-8 duration-500"
       >
         <div>
-          <h1 className="text-6xl font-bold leading-tight">
-            {slide.title}
-          </h1>
-
-          <p className="mt-6 max-w-lg text-lg text-gray-600">
-            {slide.subtitle}
-          </p>
+          <h1 className="text-6xl leading-tight font-bold">Choose Any Combo</h1>
 
           <div className="mt-10 flex gap-4">
-            <button className="rounded-xl bg-blue-600 px-6 py-3 text-white">
-              {slide.primaryButton.label}
-            </button>
+            <Link
+              href={productHref}
+              className="rounded-xl bg-blue-600 px-6 py-3 text-white"
+            >
+              View Product
+            </Link>
 
-            <button className="rounded-xl border px-6 py-3">
-              {slide.secondaryButton.label}
-            </button>
+            <Link href="/shop" className="rounded-xl border px-6 py-3">
+              Shop Now
+            </Link>
           </div>
         </div>
 
         <div className="relative flex justify-center">
           <Image
-            src={slide.image}
+            src={image}
             alt={slide.title}
             width={520}
             height={520}
@@ -68,7 +83,7 @@ export default function HeroSlider({
       <button
         onClick={() =>
           setActiveIndex(
-            (activeIndex - 1 + heroSlides.length) % heroSlides.length
+            (activeIndex - 1 + heroProducts.length) % heroProducts.length
           )
         }
         className="absolute top-1/2 left-6 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lg transition hover:scale-105"
@@ -77,25 +92,19 @@ export default function HeroSlider({
       </button>
 
       <button
-        onClick={() =>
-          setActiveIndex(
-            (activeIndex + 1) % heroSlides.length
-          )
-        }
+        onClick={() => setActiveIndex((activeIndex + 1) % heroProducts.length)}
         className="absolute top-1/2 right-6 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lg transition hover:scale-105"
       >
         →
       </button>
 
       <div className="mt-10 flex gap-3">
-        {heroSlides.map((item, index) => (
+        {heroProducts.map((item, index) => (
           <button
             key={item.id}
             onClick={() => setActiveIndex(index)}
             className={`h-3 rounded-full transition-all ${
-              activeIndex === index
-                ? "w-10 bg-blue-600"
-                : "w-3 bg-slate-300"
+              activeIndex === index ? "w-10 bg-blue-600" : "w-3 bg-slate-300"
             }`}
           />
         ))}

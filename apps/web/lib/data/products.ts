@@ -117,6 +117,54 @@ const fallbackProducts = [
   },
 ] as unknown as HttpTypes.StoreProduct[]
 
+/**
+ * Products explicitly assigned to the "Hero Products" collection
+ * in Medusa Admin.
+ *
+ * This function intentionally has NO fallback products.
+ * The homepage Hero should only show products controlled by Medusa.
+ */
+export async function getHeroProducts(
+  limit = 3
+): Promise<HttpTypes.StoreProduct[]> {
+  try {
+    const regionId = await resolveRegionId()
+
+    const collectionResponse = await medusa.store.collection.list({
+      handle: "hero-products",
+      limit: 1,
+    })
+
+    const collection = collectionResponse.collections?.[0]
+
+    if (!collection) {
+      console.warn(
+        'Hero Products collection with handle "hero-products" was not found.'
+      )
+
+      return []
+    }
+
+    const response = await medusa.store.product.list({
+      limit,
+      collection_id: collection.id,
+      region_id: regionId,
+    })
+
+    return response.products as HttpTypes.StoreProduct[]
+  } catch (error) {
+    console.error("getHeroProducts failed:", error)
+
+    return []
+  }
+}
+
+/**
+ * General product listing.
+ *
+ * Used by sections such as Best Sellers and product listings.
+ * Existing fallback behavior is intentionally preserved.
+ */
 export async function getProducts(
   limit = 20
 ): Promise<HttpTypes.StoreProduct[]> {
@@ -131,10 +179,22 @@ export async function getProducts(
     return response.products as HttpTypes.StoreProduct[]
   } catch (error) {
     console.error("getProducts failed:", error)
+
     return fallbackProducts.slice(0, limit)
   }
 }
 
+/**
+ * Fetch a single product using its Medusa handle.
+ *
+ * This powers dynamic product routing:
+ *
+ * /products/[slug]
+ *        ↓
+ * getProduct(slug)
+ *        ↓
+ * Medusa product.handle
+ */
 export async function getProduct(
   handle: string
 ): Promise<HttpTypes.StoreProduct | null> {
@@ -146,26 +206,6 @@ export async function getProduct(
       limit: 1,
       region_id: regionId,
     })
-
-    console.log("====================================")
-    console.log("REGION:", regionId)
-    console.log("HANDLE:", handle)
-
-    console.log("MEDUSA RESPONSE")
-    console.dir(response, { depth: null })
-
-    console.log("PRODUCT")
-    console.dir(response.products?.[0], { depth: null })
-
-    console.log("VARIANT")
-    console.dir(response.products?.[0]?.variants?.[0], { depth: null })
-
-    console.log("CALCULATED PRICE")
-    console.dir(response.products?.[0]?.variants?.[0]?.calculated_price, {
-      depth: null,
-    })
-
-    console.log("====================================")
 
     return (response.products?.[0] as HttpTypes.StoreProduct) ?? null
   } catch (error) {

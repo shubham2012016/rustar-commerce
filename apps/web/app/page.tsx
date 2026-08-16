@@ -6,11 +6,15 @@ import { FeaturedCollections } from "@/components/home/FeaturedCollections"
 import Testimonials from "@/components/home/Testimonials"
 import Newsletter from "@/components/home/Newsletter/Newsletter"
 
+import { getHeroProducts } from "@/lib/data/products"
 
-export default function HomePage() {
+export default async function HomePage() {
+  const heroProducts = await getHeroProducts(6)
+
   return (
     <>
-      <Hero />
+      <Hero products={heroProducts} />
+
       <CategoriesGrid />
       <BestSellers />
       <WhyChooseUs />
@@ -18,6 +22,5 @@ export default function HomePage() {
       <Testimonials />
       <Newsletter />
     </>
-    
   )
 }

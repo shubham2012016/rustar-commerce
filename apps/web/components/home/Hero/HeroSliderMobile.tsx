@@ -4,27 +4,44 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect } from "react"
 import { ArrowRight } from "lucide-react"
-
-import { heroSlides } from "./hero.data"
+import type { HttpTypes } from "@medusajs/types"
 
 interface HeroSliderMobileProps {
+  products: HttpTypes.StoreProduct[]
   activeIndex: number
   setActiveIndex: React.Dispatch<React.SetStateAction<number>>
 }
 
 export default function HeroSliderMobile({
+  products,
   activeIndex,
   setActiveIndex,
 }: HeroSliderMobileProps) {
-  const slide = heroSlides[activeIndex]
+  const heroProducts = products.filter(
+    (product) =>
+      Boolean(product.variants?.[0]) &&
+      Boolean(product.thumbnail ?? product.images?.[0]?.url)
+  )
+
+  const slide = heroProducts[activeIndex]
 
   useEffect(() => {
+    if (heroProducts.length <= 1) return
+
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % heroSlides.length)
+      setActiveIndex((prev) => (prev + 1) % heroProducts.length)
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [setActiveIndex])
+  }, [heroProducts.length, setActiveIndex])
+
+  if (!slide) {
+    return null
+  }
+
+  const image = slide.thumbnail ?? slide.images?.[0]?.url ?? ""
+
+  const productUrl = `/products/${slide.handle}`
 
   return (
     <section className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -75,7 +92,7 @@ export default function HeroSliderMobile({
           <div className="absolute top-1/2 h-60 w-60 -translate-y-1/2 rounded-full border border-white/70" />
 
           <Image
-            src={slide.image}
+            src={image}
             alt={slide.title}
             width={380}
             height={380}
@@ -92,7 +109,7 @@ export default function HeroSliderMobile({
           </h1>
 
           <p className="mx-auto mt-3 max-w-[290px] text-[15px] leading-6 text-slate-600">
-            {slide.subtitle}
+            {slide.subtitle ?? slide.description ?? ""}
           </p>
         </div>
 
@@ -100,11 +117,10 @@ export default function HeroSliderMobile({
 
         <div className="mt-6 space-y-4">
           <Link
-            href={slide.primaryButton.href}
+            href={productUrl}
             className="group flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 text-base font-semibold text-white shadow-xl shadow-blue-600/30 transition-all duration-300 hover:bg-blue-700"
           >
-            {slide.primaryButton.label}
-
+            View Product
             <ArrowRight
               size={18}
               className="ml-2 transition-transform duration-300 group-hover:translate-x-1"
@@ -112,17 +128,17 @@ export default function HeroSliderMobile({
           </Link>
 
           <Link
-            href={slide.secondaryButton.href}
+            href="/shop"
             className="flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white text-base font-semibold text-slate-900 transition hover:bg-slate-50"
           >
-            {slide.secondaryButton.label}
+            Shop Now
           </Link>
         </div>
 
         {/* Indicators */}
 
         <div className="mt-5 flex justify-center gap-3">
-          {heroSlides.map((_, index) => (
+          {heroProducts.map((_, index) => (
             <button
               key={index}
               onClick={() => setActiveIndex(index)}

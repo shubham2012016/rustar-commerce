@@ -1,20 +1,25 @@
 "use client"
 
+import type { HttpTypes } from "@medusajs/types"
+
 import HeroSliderMobile from "./HeroSliderMobile"
 import ProductCarousel from "./ProductCarousel"
 
 interface HeroMobileProps {
+  products: HttpTypes.StoreProduct[]
   activeIndex: number
   setActiveIndex: React.Dispatch<React.SetStateAction<number>>
 }
 
 export default function HeroMobile({
+  products,
   activeIndex,
   setActiveIndex,
 }: HeroMobileProps) {
   return (
     <section className="space-y-8 px-4 py-5 lg:hidden">
       <HeroSliderMobile
+        products={products}
         activeIndex={activeIndex}
         setActiveIndex={setActiveIndex}
       />
@@ -22,7 +27,7 @@ export default function HeroMobile({
       <section className="mt-2">
         <div className="mb-6 px-1">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-600">
+            <p className="text-xs font-bold tracking-[0.25em] text-blue-600 uppercase">
               Featured Products
             </p>
 
@@ -37,6 +42,7 @@ export default function HeroMobile({
         </div>
 
         <ProductCarousel
+          products={products}
           activeIndex={activeIndex}
           setActiveIndex={setActiveIndex}
         />

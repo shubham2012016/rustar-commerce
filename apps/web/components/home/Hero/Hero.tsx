@@ -5,14 +5,29 @@ import { useState } from "react"
 import HeroDesktop from "./HeroDesktop"
 import HeroMobile from "./HeroMobile"
 
-export default function Hero() {
-  const [activeIndex, setActiveIndex] = useState(0)
+import type { HttpTypes } from "@medusajs/types"
+
+interface HeroProps {
+  products: HttpTypes.StoreProduct[]
+}
+
+export default function Hero({ products }: HeroProps) {
+  const [desktopActiveIndex, setDesktopActiveIndex] = useState(0)
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(0)
 
   return (
     <>
-      <HeroDesktop activeIndex={activeIndex} setActiveIndex={setActiveIndex} />
+      <HeroDesktop
+        products={products}
+        activeIndex={desktopActiveIndex}
+        setActiveIndex={setDesktopActiveIndex}
+      />
 
-      <HeroMobile activeIndex={activeIndex} setActiveIndex={setActiveIndex} />
+      <HeroMobile
+        products={products}
+        activeIndex={mobileActiveIndex}
+        setActiveIndex={setMobileActiveIndex}
+      />
     </>
   )
 }
