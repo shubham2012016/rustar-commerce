@@ -34,15 +34,25 @@ export function mapProduct(product: HttpTypes.StoreProduct): Product {
 
     rating: 5,
 
-    reviewCount: 0,
+    reviewCount: 7,
 
-    images:
-      product.images?.map((image) => ({
-        id: image.id,
-        url: image.url,
-        alt: product.title,
-        isPrimary: image.url === product.thumbnail,
-      })) ?? [],
+    images: product.images?.length
+      ? product.images.map((image) => ({
+          id: image.id,
+          url: image.url,
+          alt: product.title,
+          isPrimary: image.url === product.thumbnail,
+        }))
+      : product.thumbnail
+        ? [
+            {
+              id: `${product.id}-thumbnail`,
+              url: product.thumbnail,
+              alt: product.title,
+              isPrimary: true,
+            },
+          ]
+        : [],
 
     variants: [
       {
