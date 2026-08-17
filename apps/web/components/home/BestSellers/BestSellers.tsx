@@ -1,13 +1,13 @@
 import { ArrowRight, Sparkles } from "lucide-react"
 
-import { getProducts } from "@/lib/data/products"
+import { getBestSellerProducts } from "@/lib/data/products"
 import { mapProduct } from "@/lib/mappers/product"
 
 import ProductCard from "./ProductCard"
 import type { Product } from "./types"
 
 export default async function BestSellers() {
-  const medusaProducts = await getProducts(6)
+  const medusaProducts = await getBestSellerProducts(6)
 
   const products: Product[] = medusaProducts.map((product) => {
     const p = mapProduct(product)

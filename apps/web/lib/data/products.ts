@@ -185,6 +185,90 @@ export async function getProducts(
 }
 
 /**
+ * Products explicitly assigned to the "After Hero" collection
+ * in Medusa Admin.
+ *
+ * The homepage section immediately after the Hero
+ * is controlled entirely from this collection.
+ */
+export async function getShowcaseProducts(
+  limit = 6
+): Promise<HttpTypes.StoreProduct[]> {
+  try {
+    const regionId = await resolveRegionId()
+
+    const collectionResponse = await medusa.store.collection.list({
+      handle: "showcase",
+      limit: 1,
+    })
+
+    const collection = collectionResponse.collections?.[0]
+
+    if (!collection) {
+      console.warn(
+        'After Hero collection with handle "after-hero" was not found.'
+      )
+
+      return []
+    }
+
+    const response = await medusa.store.product.list({
+      limit,
+      collection_id: collection.id,
+      region_id: regionId,
+    })
+
+    return response.products as HttpTypes.StoreProduct[]
+  } catch (error) {
+    console.error("getAfterHeroProducts failed:", error)
+
+    return []
+  }
+}
+
+/**
+ * Products explicitly assigned to the "Best Sellers" collection
+ * in Medusa Admin.
+ *
+ * The Best Sellers section on the homepage is controlled
+ * entirely from this collection.
+ */
+export async function getBestSellerProducts(
+  limit = 6
+): Promise<HttpTypes.StoreProduct[]> {
+  try {
+    const regionId = await resolveRegionId()
+
+    const collectionResponse = await medusa.store.collection.list({
+      handle: "best-sellers",
+      limit: 1,
+    })
+
+    const collection = collectionResponse.collections?.[0]
+
+    if (!collection) {
+      console.warn(
+        'Best Sellers collection with handle "best-sellers" was not found.'
+      )
+
+      return []
+    }
+
+    const response = await medusa.store.product.list({
+      limit,
+      collection_id: collection.id,
+      region_id: regionId,
+    })
+
+    return response.products as HttpTypes.StoreProduct[]
+  } catch (error) {
+    console.error("getBestSellerProducts failed:", error)
+
+    return []
+  }
+}
+
+/**
  * Fetch a single product using its Medusa handle.
  *
  * This powers dynamic product routing:

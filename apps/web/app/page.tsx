@@ -18,7 +18,7 @@ export default async function HomePage() {
       <CategoriesGrid />
       <BestSellers />
       <WhyChooseUs />
-      <FeaturedCollections />
+      {/* <FeaturedCollections /> */}
       <Testimonials />
       <Newsletter />
     </>
